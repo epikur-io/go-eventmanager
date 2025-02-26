@@ -15,60 +15,6 @@ func GetTestEventManager() Observer {
 	return NewEventManager(nil)
 }
 
-/*
-func TestEventChains(t *testing.T) {
-
-}
-
-func TestAddHandlers(t *testing.T) {
-	evm := GetTestEventManager()
-	commonEventHandler := func(ctx.Data EventData, ctx *EventCtx) {
-		if d, ok := ctx.Data["counter"].(*Counter); ok && d != nil {
-			d.Value = d.Value + 1
-		}
-	}
-	evm.AddHandlers([]EventHandler{
-		{
-			EventName: "event_a",
-			ID:        "id1",
-			Func:      commonEventHandler,
-			Order:     100,
-		},
-		{
-			EventName: "event_a",
-			ID:        "id2",
-			Func: func(ctx.Data EventData, ctx *EventCtx) {
-				commonEventHandler(ctx.Data, ctx)
-			},
-			Order: -1,
-		},
-		{
-			EventName: "event_b",
-			ID:        "id3",
-			Func:      commonEventHandler,
-		},
-		{
-			EventName: "event_b",
-			ID:        "id4",
-			Func:      commonEventHandler,
-		},
-	})
-
-	ctx.Data := EventData{
-		"counter": &Counter{},
-	}
-	if cnt, err := evm.Trigger("event_a", ctx.Data, NewContext()); err != nil {
-		t.Errorf("event handler failed with error: %s", err.Error())
-	} else {
-		counter, _ := ctx.Data["counter"].(*Counter)
-		if int(cnt) != counter.Value {
-			t.Errorf("invalid number of event handler executions: %d != %d", cnt, counter.Value)
-		}
-	}
-
-}
-*/
-
 func TestRecursion(t *testing.T) {
 
 	evm := GetTestEventManager()
