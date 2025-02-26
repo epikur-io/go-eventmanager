@@ -1,4 +1,4 @@
-# An event manager for Go
+# A thread-safe event manager for Go
 
 ## Example:
 

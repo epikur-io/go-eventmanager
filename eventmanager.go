@@ -43,7 +43,10 @@ type EventData = map[string]any
 
 // EventCtx stores internal information
 type EventCtx struct {
-	EventName       string
+	// Name of the triggered event
+	EventName string
+	// HandlerID of the current handler that gets executed
+	HandlerID       string
 	GoContext       context.Context
 	Interations     uint64
 	CallStack       CallStack
@@ -456,6 +459,7 @@ func (m *Manager) trigger(name string, ctx *EventCtx) (uint64, error) {
 			return ctx.Interations, errors.New("recursion is not allowed")
 		}*/
 		ctx.pushCallStack(callerID)
+		ctx.HandlerID = e.ID
 		e.Func(ctx)
 		ctx.Interations += 1
 	}
