@@ -26,7 +26,7 @@ func main() {
 			ID:        "first_handler",
 			Order:     1,
 			Func: func(ctx *evm.EventCtx) {
-				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, "first_handler")
+				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
 
 				// add some custom data to the context
 				ctx.Data["datetime"] = time.Now()
@@ -37,7 +37,7 @@ func main() {
 			ID:        "secoond_handler",
 			Order:     2,
 			Func: func(ctx *evm.EventCtx) {
-				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, "second_handler")
+				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
 
 				// do some additional work on the data provided by the previous handler
 				datetime, ok := ctx.Data["datetime"].(time.Time)
@@ -54,7 +54,7 @@ func main() {
 			ID:        "third_handler",
 			Order:     2,
 			Func: func(ctx *evm.EventCtx) {
-				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, "third_handler")
+				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
 				// this should not be executed
 			},
 		},
@@ -73,5 +73,4 @@ func main() {
 	log.Printf("Datetime:  %v\n", ectx.Data["datetime"])
 
 }
-
 ```
