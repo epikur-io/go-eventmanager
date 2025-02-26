@@ -466,27 +466,27 @@ func (m *Manager) trigger(name string, ctx *EventCtx) (uint64, error) {
 	return ctx.Interations, nil
 }
 
-type MockManager struct {
+type ObserverMock struct {
 	Observer
 }
 
-func (m *MockManager) RegisteredHandlers() map[string]EventHandlerList            { return nil }
-func (m *MockManager) DeleteAll()                                                 {}
-func (m *MockManager) DeleteByEvent(ei string)                                    {}
-func (m *MockManager) DeleteByEventAndID(ei string, id string)                    {}
-func (m *MockManager) DeleteByID(id string)                                       {}
-func (m *MockManager) DeleteByIDPrefix(prefix string)                             {}
-func (m *MockManager) CountByID(id string) uint64                                 { return 0 }
-func (m *MockManager) CountByIDPrefix(prefix string) uint64                       { return 0 }
-func (m *MockManager) CountByEventAndID(event string, id string) uint64           { return 0 }
-func (m *MockManager) CountByEventAndIDPrefix(event string, prefix string) uint64 { return 0 }
-func (m *MockManager) ReplaceHandlersByID(es []EventHandler, opt ...bool)         {}
-func (m *MockManager) ReplaceHandlersByEventAndID(es []EventHandler, opt ...bool) {}
-func (m *MockManager) AddHandlers(es []EventHandler, opt ...bool)                 {}
-func (m *MockManager) AddEventHandler(e EventHandler, opt ...bool)                {}
-func (m *MockManager) Trigger(name string, ctx *EventCtx) (uint64, error) {
+func (m *ObserverMock) RegisteredHandlers() map[string]EventHandlerList            { return nil }
+func (m *ObserverMock) DeleteAll()                                                 {}
+func (m *ObserverMock) DeleteByEvent(ei string)                                    {}
+func (m *ObserverMock) DeleteByEventAndID(ei string, id string)                    {}
+func (m *ObserverMock) DeleteByID(id string)                                       {}
+func (m *ObserverMock) DeleteByIDPrefix(prefix string)                             {}
+func (m *ObserverMock) CountByID(id string) uint64                                 { return 0 }
+func (m *ObserverMock) CountByIDPrefix(prefix string) uint64                       { return 0 }
+func (m *ObserverMock) CountByEventAndID(event string, id string) uint64           { return 0 }
+func (m *ObserverMock) CountByEventAndIDPrefix(event string, prefix string) uint64 { return 0 }
+func (m *ObserverMock) ReplaceHandlersByID(es []EventHandler, opt ...bool)         {}
+func (m *ObserverMock) ReplaceHandlersByEventAndID(es []EventHandler, opt ...bool) {}
+func (m *ObserverMock) AddHandlers(es []EventHandler, opt ...bool)                 {}
+func (m *ObserverMock) AddEventHandler(e EventHandler, opt ...bool)                {}
+func (m *ObserverMock) Trigger(name string, ctx *EventCtx) (uint64, error) {
 	return 0, nil
 }
-func (m *MockManager) TriggerCatch(name string, ctx *EventCtx, log *logrus.Logger) uint64 {
+func (m *ObserverMock) TriggerCatch(name string, ctx *EventCtx, log *logrus.Logger) uint64 {
 	return 0
 }
