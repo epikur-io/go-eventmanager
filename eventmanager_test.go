@@ -16,9 +16,9 @@ func GetTestEventManager() Observer {
 }
 
 func TestRecursion(t *testing.T) {
-
 	evm := GetTestEventManager()
 	evm.AllowRecursion(false)
+
 	commonEventHandler := func(ctx *EventCtx) {
 		if d, ok := ctx.Data["counter"].(*Counter); ok && d != nil {
 			d.Value = d.Value + 1
@@ -67,6 +67,7 @@ func TestRecursion(t *testing.T) {
 	gctx, _ := context.WithTimeout(context.Background(), time.Second*3)
 	ectx := NewEventContext(gctx)
 	ectx.Data["counter"] = &Counter{}
+
 	if cnt, err := evm.Trigger("event_a", ectx); err != nil {
 		t.Errorf("event handler failed with error: %s", err.Error())
 	} else {
