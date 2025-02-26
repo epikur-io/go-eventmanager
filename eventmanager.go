@@ -27,6 +27,11 @@ const (
 	DefaultCallstackLimit = uint64(510) // 2 * 255
 )
 
+var (
+	ErrRecursionNotAllowed   = errors.New("recursion is not allowed")
+	ErrCallstackLimitExeeded = errors.New("callstack limit exceeded")
+)
+
 type CallStack []string
 
 func (c CallStack) Contains(callerID string) bool {
@@ -52,6 +57,7 @@ type EventCtx struct {
 	CallStack       CallStack
 	EventSourceMap  map[string]uint64
 	StopPropagation bool
+	err             error
 	Data            EventData
 }
 
@@ -68,11 +74,15 @@ func (ctx *EventCtx) pushCallStack(e string) {
 	ctx.CallStack = append(ctx.CallStack, e)
 }
 
+func (ctx *EventCtx) Error() error {
+	return ctx.err
+}
+
 func (ctx *EventCtx) addEventSource(e string, allowRecursion bool) error {
 	if _, ok := ctx.EventSourceMap[e]; ok {
 		ctx.EventSourceMap[e] += 1
 		if !allowRecursion && ctx.EventSourceMap[e] > 1 {
-			return errors.New("event source already exists")
+			return fmt.Errorf("event source \"%s\" already exists", e)
 		}
 	}
 	ctx.EventSourceMap[e] = 1
@@ -126,7 +136,7 @@ type Observer interface {
 // Manager manages the event/event chains
 type Manager struct {
 	eventHandlers  map[string]EventHandlerList // Event handler map
-	callstackLimit uint64                      // The max number of callback per event
+	callstackLimit int                         // The max number of callback per event
 	allowRecursion bool                        // disabled by default
 	log            *logrus.Logger
 	mux            *sync.RWMutex
@@ -145,7 +155,7 @@ func (m *Manager) init() {
 	m.mux = &sync.RWMutex{}
 	m.eventHandlers = make(map[string]EventHandlerList)
 	if m.callstackLimit < 1 {
-		m.callstackLimit = DefaultCallstackLimit
+		m.callstackLimit = int(DefaultCallstackLimit)
 	}
 }
 
@@ -425,14 +435,18 @@ func (m *Manager) trigger(name string, ctx *EventCtx) (uint64, error) {
 	if ctx == nil {
 		return 0, nil
 	}
+	if ctx.err != nil {
+		return ctx.Interations, ctx.err
+	}
 	el, ok := m.eventHandlers[name]
 	if !ok || len(el) < 1 {
-		return 0, nil
+		return ctx.Interations, ctx.err
 	}
 	ctx.EventName = name
 	if err := ctx.addEventSource(name, m.allowRecursion); err != nil {
 		// also checks for recursion and stops if not allowed
-		return 0, err
+		ctx.err = err
+		return ctx.Interations, ctx.err
 	}
 	for _, e := range el {
 		if ctx.GoContext != nil {
@@ -442,12 +456,20 @@ func (m *Manager) trigger(name string, ctx *EventCtx) (uint64, error) {
 			default:
 			}
 		}
+		if ctx.err != nil {
+			return ctx.Interations, ctx.err
+		}
 		callerID := fmt.Sprintf("%s.%s", e.EventName, e.ID)
-		if m.callstackLimit > 0 && ctx.Interations > m.callstackLimit {
-			return ctx.Interations, errors.New("callstack limit exceeded")
+		if !m.allowRecursion && ctx.CallStack.Contains(callerID) {
+			ctx.err = ErrRecursionNotAllowed
+			return ctx.Interations, ctx.err
+		}
+		if m.callstackLimit > 0 && len(ctx.CallStack) >= m.callstackLimit {
+			ctx.err = ErrCallstackLimitExeeded
+			return ctx.Interations, ctx.err
 		}
 		if ctx.StopPropagation {
-			return ctx.Interations, nil
+			return ctx.Interations, ctx.err
 		}
 		if m.log != nil {
 			m.log.WithFields(logrus.Fields{
@@ -455,15 +477,12 @@ func (m *Manager) trigger(name string, ctx *EventCtx) (uint64, error) {
 				"event_id": e.ID,
 			}).Debug("executing event handler")
 		}
-		/*if !m.allowRecursion && ctx.CallStack.Contains(callerID) {
-			return ctx.Interations, errors.New("recursion is not allowed")
-		}*/
 		ctx.pushCallStack(callerID)
 		ctx.HandlerID = e.ID
 		e.Func(ctx)
 		ctx.Interations += 1
 	}
-	return ctx.Interations, nil
+	return ctx.Interations, ctx.err
 }
 
 type ObserverMock struct {
