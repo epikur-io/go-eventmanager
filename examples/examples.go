@@ -28,7 +28,7 @@ func main() {
 		},
 		{
 			EventName: "event_a",
-			ID:        "secoond_handler",
+			ID:        "second_handler",
 			Order:     2,
 			Func: func(ctx *evm.EventCtx) {
 				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
