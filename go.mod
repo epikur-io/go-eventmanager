@@ -2,9 +2,7 @@ module github.com/epikur-io/go-eventmanager
 
 go 1.22.3
 
-replace (
-    github.com/epikur-io/go-eventmanager => ./
-)
+replace github.com/epikur-io/go-eventmanager => ./
 
 require github.com/sirupsen/logrus v1.9.3
 
