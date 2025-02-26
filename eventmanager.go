@@ -484,9 +484,9 @@ func (m *MockManager) ReplaceHandlersByID(es []EventHandler, opt ...bool)       
 func (m *MockManager) ReplaceHandlersByEventAndID(es []EventHandler, opt ...bool) {}
 func (m *MockManager) AddHandlers(es []EventHandler, opt ...bool)                 {}
 func (m *MockManager) AddEventHandler(e EventHandler, opt ...bool)                {}
-func (m *MockManager) Trigger(name string, data EventData, ctx *EventCtx) (uint64, error) {
+func (m *MockManager) Trigger(name string, ctx *EventCtx) (uint64, error) {
 	return 0, nil
 }
-func (m *MockManager) TriggerCatch(name string, data EventData, ctx *EventCtx, log *logrus.Logger) uint64 {
+func (m *MockManager) TriggerCatch(name string, ctx *EventCtx, log *logrus.Logger) uint64 {
 	return 0
 }
