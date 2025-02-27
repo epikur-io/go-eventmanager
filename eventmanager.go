@@ -130,7 +130,7 @@ type Observer interface {
 	AddHandlers(es []*EventHandler, opt ...bool)
 	AddEventHandler(e *EventHandler, opt ...bool)
 	Trigger(name string, ctx *EventCtx) (uint64, error)
-	TriggerCatch(name string, data EventData, ctx *EventCtx, log *logrus.Logger) uint64
+	TriggerCatch(name string, ctx *EventCtx, log *logrus.Logger) uint64
 }
 
 // esnure our implementation satisfies the Observer interface
@@ -424,10 +424,14 @@ func (m *Manager) addHandler(e *EventHandler, opt ...bool) {
 
 // Triggers an event with the given data and context and logs
 // potential errors but doesn't return them
-func (m *Manager) TriggerCatch(name string, data EventData, ctx *EventCtx, logger *logrus.Logger) uint64 {
+func (m *Manager) TriggerCatch(name string, ctx *EventCtx, logger *logrus.Logger) uint64 {
 	m.mux.RLock()
 	defer m.mux.RUnlock()
 	res, err := m.trigger(name, ctx)
+
+	if logger == nil {
+		logger = m.log
+	}
 	if err != nil && logger != nil {
 		logger.WithFields(logrus.Fields{
 			"event_name":    name,
@@ -500,6 +504,8 @@ func (m *Manager) trigger(name string, ctx *EventCtx) (uint64, error) {
 	}
 	return ctx.Interations, ctx.err
 }
+
+var _ Observer = &ObserverMock{}
 
 type ObserverMock struct {
 	Observer
