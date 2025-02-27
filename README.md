@@ -19,7 +19,7 @@ func main() {
 
 	// Add multiple event handlers / hooks
 	// use "evmInstance.AddEventHandler(evm.EventHandler{..})" to add a  single event handle
-	evmInstance.AddHandlers([]evm.EventHandler{
+	evmInstance.AddHandlers([]*evm.EventHandler{
 		// Multiple handlers for the same event, handlers will be executed by their given order
 		{
 			EventName: "event_a",

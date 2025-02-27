@@ -10,9 +10,28 @@ type Counter struct {
 	Value int
 }
 
+func TestEnforceIDUniqueness(t *testing.T) {
+	evm := NewEventManager(nil)
+	evm.AddHandlers([]*EventHandler{
+		{
+			EventName: "event_b",
+			ID:        "id1",
+			Func:      func(ctx *EventCtx) {},
+		},
+		{
+			EventName: "event_b",
+			ID:        "id1",
+			Func:      func(ctx *EventCtx) {},
+		},
+	}, true)
+	if count := evm.CountByEventAndID("event_b", "id1"); count != 1 {
+		t.Errorf("expected count to equal 2 but got %d", count)
+	}
+}
+
 func TestCountByEventAndID(t *testing.T) {
 	evm := NewEventManager(nil)
-	evm.AddHandlers([]EventHandler{
+	evm.AddHandlers([]*EventHandler{
 		{
 			EventName: "event_a",
 			ID:        "id1",
@@ -39,7 +58,7 @@ func TestCountByEventAndID(t *testing.T) {
 
 func TestCountByEventAndIDPrefix(t *testing.T) {
 	evm := NewEventManager(nil)
-	evm.AddHandlers([]EventHandler{
+	evm.AddHandlers([]*EventHandler{
 		{
 			EventName: "event_b",
 			ID:        "id1",
@@ -57,7 +76,7 @@ func TestCountByEventAndIDPrefix(t *testing.T) {
 }
 func TestDeleteByID(t *testing.T) {
 	evm := NewEventManager(nil)
-	evm.AddHandlers([]EventHandler{
+	evm.AddHandlers([]*EventHandler{
 		{
 			EventName: "event_b",
 			ID:        "id1",
@@ -74,7 +93,7 @@ func TestDeleteByID(t *testing.T) {
 	}
 }
 
-func TestRecursion(t *testing.T) {
+func TestRecursionNotAllowed(t *testing.T) {
 	evm := NewEventManager(nil)
 	evm.AllowRecursion(false)
 
@@ -85,14 +104,12 @@ func TestRecursion(t *testing.T) {
 	}
 
 	testVal := "value"
-	evm.AddHandlers([]EventHandler{
+	evm.AddHandlers([]*EventHandler{
 		{
 			EventName: "event_a",
 			ID:        "id1",
-			Func: func(ctx *EventCtx) {
-				time.Sleep(time.Second * 2)
-			},
-			Order: 100,
+			Func:      func(ctx *EventCtx) {},
+			Order:     100,
 		},
 		{
 			EventName: "event_a",
@@ -116,8 +133,7 @@ func TestRecursion(t *testing.T) {
 		},
 	})
 
-	gctx, _ := context.WithTimeout(context.Background(), time.Second*3)
-	ectx := NewEventContext(gctx)
+	ectx := NewEventContext(context.Background())
 	ectx.Data["counter"] = &Counter{}
 
 	if cnt, err := evm.Trigger("event_a", ectx); err == nil {
@@ -143,7 +159,7 @@ func TestRecursionCallLimit(t *testing.T) {
 	incr := func() {
 		counter += 1
 	}
-	evm.AddHandlers([]EventHandler{
+	evm.AddHandlers([]*EventHandler{
 		{
 			EventName: "event_a",
 			ID:        "id1",
@@ -172,7 +188,8 @@ func TestRecursionCallLimit(t *testing.T) {
 		},
 	})
 
-	gctx, _ := context.WithTimeout(context.Background(), time.Second*7)
+	gctx, cancel := context.WithTimeout(context.Background(), time.Second*7)
+	defer cancel()
 	ectx := NewEventContext(gctx)
 
 	if cnt, err := evm.Trigger("event_a", ectx); err == nil {
@@ -181,6 +198,49 @@ func TestRecursionCallLimit(t *testing.T) {
 
 	if counter != 510 {
 		t.Errorf("expected counter to equal to 510 but go %d", counter)
+	}
+}
+
+func TestContextTimeout(t *testing.T) {
+	evm := NewEventManager(nil)
+
+	evm.AddHandlers([]*EventHandler{
+		{
+			EventName: "event_a",
+			ID:        "id1",
+			Func: func(ctx *EventCtx) {
+				time.Sleep(time.Millisecond * 1100)
+			},
+			Order: 100,
+		},
+		{
+			EventName: "event_a",
+			ID:        "id1",
+			Func: func(ctx *EventCtx) {
+				// you can additionally check for expiration inside your own event handlers
+				if ctx.GoContext != nil {
+					select {
+					case <-ctx.GoContext.Done():
+						return
+					default:
+					}
+				}
+			},
+			Order: 100,
+		},
+	})
+
+	gctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
+	defer cancel()
+	ectx := NewEventContext(gctx)
+
+	if cnt, err := evm.Trigger("event_a", ectx); err == nil {
+		t.Errorf("error expected but got %v. iterations: %d", err, cnt)
+	}
+
+	// ensure the second event handler wasn't executed
+	if len(ectx.CallStack) > 1 {
+		t.Errorf("expected exactly one event handler to be executed but got %d executions", len(ectx.CallStack))
 	}
 
 }
