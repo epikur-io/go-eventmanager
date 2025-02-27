@@ -117,20 +117,20 @@ type Observer interface {
 	AllowRecursion(allow bool)
 	RegisteredHandlers() map[string]EventHandlerList
 	DeleteAll()
-	DeleteByEvent(ei string)
-	DeleteByEventAndID(ei string, id string)
+	DeleteByEvent(eventName string)
+	DeleteByEventAndID(eventName string, id string)
 	DeleteByID(id string) uint64
 	DeleteByIDPrefix(prefix string) uint64
 	CountByID(id string) uint64
 	CountByIDPrefix(prefix string) uint64
-	CountByEventAndID(event string, id string) uint64
-	CountByEventAndIDPrefix(event string, prefix string) uint64
-	ReplaceHandlersByID(es []*EventHandler, opt ...bool)
-	ReplaceHandlersByEventAndID(es []*EventHandler, opt ...bool)
-	AddHandlers(es []*EventHandler, opt ...bool)
-	AddEventHandler(e *EventHandler, opt ...bool)
-	Trigger(name string, ctx *EventCtx) (uint64, error)
-	TriggerCatch(name string, ctx *EventCtx, log *logrus.Logger) uint64
+	CountByEventAndID(eventName string, id string) uint64
+	CountByEventAndIDPrefix(eventName string, prefix string) uint64
+	ReplaceHandlersByID(eventHandlers []*EventHandler, opt ...bool)
+	ReplaceHandlersByEventAndID(eventHandlers []*EventHandler, opt ...bool)
+	AddHandlers(eventHandlers []*EventHandler, opt ...bool)
+	AddEventHandler(eventHandler *EventHandler, opt ...bool)
+	Trigger(eventName string, ctx *EventCtx) (uint64, error)
+	TriggerCatch(eventName string, ctx *EventCtx, log *logrus.Logger) uint64
 }
 
 // esnure our implementation satisfies the Observer interface
