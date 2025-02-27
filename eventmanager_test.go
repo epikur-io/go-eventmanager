@@ -2,7 +2,6 @@ package eventmanager
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 )
@@ -11,12 +10,72 @@ type Counter struct {
 	Value int
 }
 
-func GetTestEventManager() Observer {
-	return NewEventManager(nil)
+func TestCountByEventAndID(t *testing.T) {
+	evm := NewEventManager(nil)
+	evm.AddHandlers([]EventHandler{
+		{
+			EventName: "event_a",
+			ID:        "id1",
+			Func:      func(ctx *EventCtx) {},
+		},
+		{
+			EventName: "event_b",
+			ID:        "id1",
+			Func:      func(ctx *EventCtx) {},
+		},
+		{
+			EventName: "event_b",
+			ID:        "id1",
+			Func:      func(ctx *EventCtx) {},
+		},
+	})
+	if count := evm.CountByEventAndID("event_a", "id1"); count != 1 {
+		t.Errorf("expected count to equal 1 but got %d", count)
+	}
+	if count := evm.CountByEventAndID("event_b", "id1"); count != 2 {
+		t.Errorf("expected count to equal 2 but got %d", count)
+	}
+}
+
+func TestCountByEventAndIDPrefix(t *testing.T) {
+	evm := NewEventManager(nil)
+	evm.AddHandlers([]EventHandler{
+		{
+			EventName: "event_b",
+			ID:        "id1",
+			Func:      func(ctx *EventCtx) {},
+		},
+		{
+			EventName: "event_b",
+			ID:        "id1",
+			Func:      func(ctx *EventCtx) {},
+		},
+	})
+	if count := evm.CountByEventAndIDPrefix("event_b", "id"); count != 2 {
+		t.Errorf("expected count to equal 2 but got %d", count)
+	}
+}
+func TestDeleteByID(t *testing.T) {
+	evm := NewEventManager(nil)
+	evm.AddHandlers([]EventHandler{
+		{
+			EventName: "event_b",
+			ID:        "id1",
+			Func:      func(ctx *EventCtx) {},
+		},
+		{
+			EventName: "event_b",
+			ID:        "id1",
+			Func:      func(ctx *EventCtx) {},
+		},
+	})
+	if count := evm.DeleteByID("id1"); count != 2 {
+		t.Errorf("expected count to equal 2 but got %d", count)
+	}
 }
 
 func TestRecursion(t *testing.T) {
-	evm := GetTestEventManager()
+	evm := NewEventManager(nil)
 	evm.AllowRecursion(false)
 
 	commonEventHandler := func(ctx *EventCtx) {
@@ -77,7 +136,7 @@ func TestRecursion(t *testing.T) {
 
 }
 func TestRecursionCallLimit(t *testing.T) {
-	evm := GetTestEventManager()
+	evm := NewEventManager(nil)
 	evm.AllowRecursion(true)
 
 	counter := 0
@@ -120,7 +179,6 @@ func TestRecursionCallLimit(t *testing.T) {
 		t.Errorf("error expected but got %v. iterations: %d", err, cnt)
 	}
 
-	fmt.Println("counter:", counter)
 	if counter != 510 {
 		t.Errorf("expected counter to equal to 510 but go %d", counter)
 	}

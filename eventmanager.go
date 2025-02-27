@@ -119,8 +119,8 @@ type Observer interface {
 	DeleteAll()
 	DeleteByEvent(ei string)
 	DeleteByEventAndID(ei string, id string)
-	DeleteByID(id string)
-	DeleteByIDPrefix(prefix string)
+	DeleteByID(id string) uint64
+	DeleteByIDPrefix(prefix string) uint64
 	CountByID(id string) uint64
 	CountByIDPrefix(prefix string) uint64
 	CountByEventAndID(event string, id string) uint64
@@ -231,12 +231,14 @@ func (m *Manager) deleteByEventAndID(ei string, id string) {
 }
 
 // Deletes all event handlers with the given ID ignoring the event name
-func (m *Manager) DeleteByID(id string) {
+func (m *Manager) DeleteByID(id string) uint64 {
 	m.mux.Lock()
-	m.deleteByID(id)
+	deleted := m.deleteByID(id)
 	m.mux.Unlock()
+	return deleted
 }
-func (m *Manager) deleteByID(id string) {
+func (m *Manager) deleteByID(id string) uint64 {
+	total := 0
 	for ei, ev := range m.eventHandlers {
 		deleted := 0
 		for i, e := range ev {
@@ -253,13 +255,16 @@ func (m *Manager) deleteByID(id string) {
 				deleted++
 			}
 		}
+		total += deleted
 		m.eventHandlers[ei].Sort()
 	}
+	return uint64(total)
 }
 
 // Deletes all event handlers that where the ID starts with the given prefix
-func (m *Manager) DeleteByIDPrefix(prefix string) {
+func (m *Manager) DeleteByIDPrefix(prefix string) uint64 {
 	m.mux.Lock()
+	total := 0
 	for ei, ev := range m.eventHandlers {
 		deleted := 0
 		for i, e := range ev {
@@ -276,9 +281,11 @@ func (m *Manager) DeleteByIDPrefix(prefix string) {
 				deleted++
 			}
 		}
+		total += deleted
 		m.eventHandlers[ei].Sort()
 	}
 	m.mux.Unlock()
+	return uint64(total)
 }
 
 // Returns the number of event handlers registers with the given ID ignoring the event name
@@ -373,7 +380,7 @@ func (m *Manager) AddEventHandler(e EventHandler, opt ...bool) {
 	m.addHandler(e, opt...)
 }
 
-// AddEventHandler adds an event handler to the EventManager
+// AddEventHandler adds an event handler to the event Manager
 // the provided function must not start goroutines that trigger other events
 // that use references of the event or event context!
 func (m *Manager) addHandler(e EventHandler, opt ...bool) {
@@ -409,7 +416,8 @@ func (m *Manager) addHandler(e EventHandler, opt ...bool) {
 	}
 }
 
-// Triggers an event with the given data and context and logs potential errors
+// Triggers an event with the given data and context and logs
+// potential errors but doesn't return them
 func (m *Manager) TriggerCatch(name string, data EventData, ctx *EventCtx, logger *logrus.Logger) uint64 {
 	m.mux.RLock()
 	defer m.mux.RUnlock()
@@ -493,8 +501,8 @@ func (m *ObserverMock) RegisteredHandlers() map[string]EventHandlerList         
 func (m *ObserverMock) DeleteAll()                                                 {}
 func (m *ObserverMock) DeleteByEvent(ei string)                                    {}
 func (m *ObserverMock) DeleteByEventAndID(ei string, id string)                    {}
-func (m *ObserverMock) DeleteByID(id string)                                       {}
-func (m *ObserverMock) DeleteByIDPrefix(prefix string)                             {}
+func (m *ObserverMock) DeleteByID(id string) uint64                                { return uint64(0) }
+func (m *ObserverMock) DeleteByIDPrefix(prefix string) uint64                      { return uint64(0) }
 func (m *ObserverMock) CountByID(id string) uint64                                 { return 0 }
 func (m *ObserverMock) CountByIDPrefix(prefix string) uint64                       { return 0 }
 func (m *ObserverMock) CountByEventAndID(event string, id string) uint64           { return 0 }
