@@ -113,7 +113,7 @@ func (s EventHandlerList) Less(i, j int) bool {
 	return (s[i].Order) < (s[j].Order)
 }
 
-type Observer interface {
+type IObserver interface {
 	AllowRecursion(allow bool)
 	RegisteredHandlers() map[string]EventHandlerList
 	DeleteAll()
@@ -134,10 +134,10 @@ type Observer interface {
 }
 
 // esnure our implementation satisfies the Observer interface
-var _ Observer = &Manager{}
+var _ IObserver = &Observer{}
 
-// Manager manages the event/event chains
-type Manager struct {
+// Observer manages the event/event chains
+type Observer struct {
 	eventHandlers  map[string]EventHandlerList // Event handler map
 	callstackLimit int                         // The max number of callback per event
 	allowRecursion bool                        // disabled by default
@@ -145,73 +145,73 @@ type Manager struct {
 	mux            *sync.RWMutex
 }
 
-func NewEventManager(log *logrus.Logger) *Manager {
-	evm := &Manager{
+func NewObserver(log *logrus.Logger) *Observer {
+	o := &Observer{
 		log: log,
 	}
-	evm.init()
-	return evm
+	o.init()
+	return o
 }
 
 // Initalizes the EventManager and must be called befor you use it when not using the constructor
-func (m *Manager) init() {
-	m.mux = &sync.RWMutex{}
-	m.eventHandlers = make(map[string]EventHandlerList)
-	if m.callstackLimit < 1 {
-		m.callstackLimit = int(DefaultCallstackLimit)
+func (o *Observer) init() {
+	o.mux = &sync.RWMutex{}
+	o.eventHandlers = make(map[string]EventHandlerList)
+	if o.callstackLimit < 1 {
+		o.callstackLimit = int(DefaultCallstackLimit)
 	}
 }
 
 // Allows recursive executuion of event handlers debending on the setting
-func (m *Manager) AllowRecursion(allow bool) {
-	m.mux.Lock()
-	m.allowRecursion = allow
-	m.mux.Unlock()
+func (o *Observer) AllowRecursion(allow bool) {
+	o.mux.Lock()
+	o.allowRecursion = allow
+	o.mux.Unlock()
 }
 
 // Returns all registered event handlers mapped by eventName->Handler
-func (m *Manager) RegisteredHandlers() map[string]EventHandlerList {
-	m.mux.RLock()
+func (o *Observer) RegisteredHandlers() map[string]EventHandlerList {
+	o.mux.RLock()
 	var meta map[string]EventHandlerList = make(map[string]EventHandlerList)
-	for e, ec := range m.eventHandlers {
+	for e, ec := range o.eventHandlers {
 		meta[e] = EventHandlerList{}
 		copy(meta[e], ec[:])
 	}
-	m.mux.RUnlock()
+	o.mux.RUnlock()
 	return meta
 }
 
 // Deletes all registered event handlers
-func (m *Manager) DeleteAll() {
-	m.mux.Lock()
-	m.deleteAll()
-	m.mux.Unlock()
+func (o *Observer) DeleteAll() {
+	o.mux.Lock()
+	o.deleteAll()
+	o.mux.Unlock()
 }
 
-func (m *Manager) deleteAll() {
+func (m *Observer) deleteAll() {
 	m.eventHandlers = make(map[string]EventHandlerList)
 }
 
 // DeleteByEvent deletes event handler by its event name their listening on
-func (m *Manager) DeleteByEvent(ei string) {
-	m.mux.Lock()
-	m.deleteByEvent(ei)
-	m.mux.Unlock()
+func (o *Observer) DeleteByEvent(ei string) {
+	o.mux.Lock()
+	o.deleteByEvent(ei)
+	o.mux.Unlock()
 }
 
-func (m *Manager) deleteByEvent(ei string) {
-	delete(m.eventHandlers, ei)
+func (o *Observer) deleteByEvent(ei string) {
+	delete(o.eventHandlers, ei)
 }
 
 // Deletes the registered event handlers filtered by event name and ID
-func (m *Manager) DeleteByEventAndID(ei string, id string) {
-	m.mux.Lock()
-	m.deleteByEventAndID(ei, id)
-	m.mux.Unlock()
+func (o *Observer) DeleteByEventAndID(ei string, id string) {
+	o.mux.Lock()
+	o.deleteByEventAndID(ei, id)
+	o.mux.Unlock()
 }
 
-func (m *Manager) deleteByEventAndID(ei string, id string) {
-	ev, ok := m.eventHandlers[ei]
+func (o *Observer) deleteByEventAndID(ei string, id string) {
+	ev, ok := o.eventHandlers[ei]
 	if !ok || len(ev) < 1 {
 		return
 	}
@@ -219,117 +219,117 @@ func (m *Manager) deleteByEventAndID(ei string, id string) {
 	for i, e := range ev {
 		j := i - deleted
 		if e.ID == id {
-			if len(m.eventHandlers[ei]) == 1 {
-				delete(m.eventHandlers, ei)
+			if len(o.eventHandlers[ei]) == 1 {
+				delete(o.eventHandlers, ei)
 				break
 			}
-			m.eventHandlers[ei] = append(
-				m.eventHandlers[ei][:j],
-				m.eventHandlers[ei][j+1:]...,
+			o.eventHandlers[ei] = append(
+				o.eventHandlers[ei][:j],
+				o.eventHandlers[ei][j+1:]...,
 			)
 			deleted++
 		}
 	}
-	m.eventHandlers[ei].Sort()
+	o.eventHandlers[ei].Sort()
 }
 
 // Deletes all event handlers with the given ID ignoring the event name
-func (m *Manager) DeleteByID(id string) uint64 {
-	m.mux.Lock()
-	deleted := m.deleteByID(id)
-	m.mux.Unlock()
+func (o *Observer) DeleteByID(id string) uint64 {
+	o.mux.Lock()
+	deleted := o.deleteByID(id)
+	o.mux.Unlock()
 	return deleted
 }
-func (m *Manager) deleteByID(id string) uint64 {
+func (o *Observer) deleteByID(id string) uint64 {
 	total := 0
-	for ei, ev := range m.eventHandlers {
+	for ei, ev := range o.eventHandlers {
 		deleted := 0
 		for i, e := range ev {
 			j := i - deleted
 			if e.ID == id {
-				if len(m.eventHandlers[ei]) == 1 {
-					delete(m.eventHandlers, ei)
+				if len(o.eventHandlers[ei]) == 1 {
+					delete(o.eventHandlers, ei)
 					deleted++
 					break
 				}
-				m.eventHandlers[ei] = append(
-					m.eventHandlers[ei][:j], m.eventHandlers[ei][j+1:]...,
+				o.eventHandlers[ei] = append(
+					o.eventHandlers[ei][:j], o.eventHandlers[ei][j+1:]...,
 				)
 				deleted++
 			}
 		}
 		total += deleted
-		m.eventHandlers[ei].Sort()
+		o.eventHandlers[ei].Sort()
 	}
 	return uint64(total)
 }
 
 // Deletes all event handlers that where the ID starts with the given prefix
-func (m *Manager) DeleteByIDPrefix(prefix string) uint64 {
-	m.mux.Lock()
+func (o *Observer) DeleteByIDPrefix(prefix string) uint64 {
+	o.mux.Lock()
 	total := 0
-	for ei, ev := range m.eventHandlers {
+	for ei, ev := range o.eventHandlers {
 		deleted := 0
 		for i, e := range ev {
 			j := i - deleted
 			if strings.HasPrefix(e.ID, prefix) {
-				if len(m.eventHandlers[ei]) == 1 {
-					delete(m.eventHandlers, ei)
+				if len(o.eventHandlers[ei]) == 1 {
+					delete(o.eventHandlers, ei)
 					deleted++
 					break
 				}
-				m.eventHandlers[ei] = append(
-					m.eventHandlers[ei][:j], m.eventHandlers[ei][j+1:]...,
+				o.eventHandlers[ei] = append(
+					o.eventHandlers[ei][:j], o.eventHandlers[ei][j+1:]...,
 				)
 				deleted++
 			}
 		}
 		total += deleted
-		m.eventHandlers[ei].Sort()
+		o.eventHandlers[ei].Sort()
 	}
-	m.mux.Unlock()
+	o.mux.Unlock()
 	return uint64(total)
 }
 
 // Returns the number of event handlers registers with the given ID ignoring the event name
-func (m *Manager) CountByID(id string) uint64 {
-	m.mux.RLock()
+func (o *Observer) CountByID(id string) uint64 {
+	o.mux.RLock()
 	found := uint64(0)
-	for _, ev := range m.eventHandlers {
+	for _, ev := range o.eventHandlers {
 		for _, e := range ev {
 			if e.ID == id {
 				found++
 			}
 		}
 	}
-	m.mux.RUnlock()
+	o.mux.RUnlock()
 	return found
 }
 
 // Returns the number of registered event handlers filterd by ID ignoring the name
-func (m *Manager) CountByIDPrefix(prefix string) uint64 {
-	m.mux.RLock()
+func (o *Observer) CountByIDPrefix(prefix string) uint64 {
+	o.mux.RLock()
 	found := uint64(0)
-	for _, ev := range m.eventHandlers {
+	for _, ev := range o.eventHandlers {
 		for _, e := range ev {
 			if strings.HasPrefix(e.ID, prefix) {
 				found++
 			}
 		}
 	}
-	m.mux.RUnlock()
+	o.mux.RUnlock()
 	return found
 }
 
 // Returns the number of registered event handlers filterd by name and ID
-func (m *Manager) CountByEventAndID(event string, id string) uint64 {
-	m.mux.RLock()
-	defer m.mux.RUnlock()
-	if _, ok := m.eventHandlers[event]; !ok {
+func (o *Observer) CountByEventAndID(event string, id string) uint64 {
+	o.mux.RLock()
+	defer o.mux.RUnlock()
+	if _, ok := o.eventHandlers[event]; !ok {
 		return 0
 	}
 	found := uint64(0)
-	for _, e := range m.eventHandlers[event] {
+	for _, e := range o.eventHandlers[event] {
 		if e.ID == id {
 			found++
 		}
@@ -337,14 +337,14 @@ func (m *Manager) CountByEventAndID(event string, id string) uint64 {
 	return found
 }
 
-func (m *Manager) CountByEventAndIDPrefix(event string, prefix string) uint64 {
-	m.mux.RLock()
-	defer m.mux.RUnlock()
-	if _, ok := m.eventHandlers[event]; !ok {
+func (o *Observer) CountByEventAndIDPrefix(event string, prefix string) uint64 {
+	o.mux.RLock()
+	defer o.mux.RUnlock()
+	if _, ok := o.eventHandlers[event]; !ok {
 		return 0
 	}
 	found := uint64(0)
-	for _, e := range m.eventHandlers[event] {
+	for _, e := range o.eventHandlers[event] {
 		if strings.HasPrefix(e.ID, prefix) {
 			found++
 		}
@@ -352,41 +352,41 @@ func (m *Manager) CountByEventAndIDPrefix(event string, prefix string) uint64 {
 	return found
 }
 
-func (m *Manager) ReplaceHandlersByEventAndID(es []*EventHandler, opt ...bool) {
-	m.mux.Lock()
-	defer m.mux.Unlock()
+func (o *Observer) ReplaceHandlersByEventAndID(es []*EventHandler, opt ...bool) {
+	o.mux.Lock()
+	defer o.mux.Unlock()
 	for _, e := range es {
-		m.deleteByEventAndID(e.EventName, e.ID)
-		m.addHandler(e, opt...)
+		o.deleteByEventAndID(e.EventName, e.ID)
+		o.addHandler(e, opt...)
 	}
 }
-func (m *Manager) ReplaceHandlersByID(es []*EventHandler, opt ...bool) {
-	m.mux.Lock()
-	defer m.mux.Unlock()
+func (o *Observer) ReplaceHandlersByID(es []*EventHandler, opt ...bool) {
+	o.mux.Lock()
+	defer o.mux.Unlock()
 	for _, e := range es {
-		m.deleteByID(e.ID)
-		m.addHandler(e, opt...)
-	}
-}
-
-func (m *Manager) AddHandlers(es []*EventHandler, opt ...bool) {
-	m.mux.Lock()
-	defer m.mux.Unlock()
-	for _, e := range es {
-		m.addHandler(e, opt...)
+		o.deleteByID(e.ID)
+		o.addHandler(e, opt...)
 	}
 }
 
-func (m *Manager) AddEventHandler(e *EventHandler, opt ...bool) {
-	m.mux.Lock()
-	defer m.mux.Unlock()
-	m.addHandler(e, opt...)
+func (o *Observer) AddHandlers(es []*EventHandler, opt ...bool) {
+	o.mux.Lock()
+	defer o.mux.Unlock()
+	for _, e := range es {
+		o.addHandler(e, opt...)
+	}
+}
+
+func (o *Observer) AddEventHandler(e *EventHandler, opt ...bool) {
+	o.mux.Lock()
+	defer o.mux.Unlock()
+	o.addHandler(e, opt...)
 }
 
 // AddEventHandler adds an event handler to the event Manager
 // the provided function must not start goroutines that trigger other events
 // that use references of the event or event context!
-func (m *Manager) addHandler(e *EventHandler, opt ...bool) {
+func (o *Observer) addHandler(e *EventHandler, opt ...bool) {
 	// !TODO remove "opt" parameter or rename it to prefixCheck (better naming)
 	if e == nil {
 		return
@@ -394,16 +394,16 @@ func (m *Manager) addHandler(e *EventHandler, opt ...bool) {
 	if e.Func == nil {
 		return
 	}
-	_, ok := m.eventHandlers[e.EventName]
+	_, ok := o.eventHandlers[e.EventName]
 	if !ok {
-		m.eventHandlers[e.EventName] = []*EventHandler{}
+		o.eventHandlers[e.EventName] = []*EventHandler{}
 	}
 	if len(opt) > 0 && opt[0] {
 		var prefixCheck bool
 		if len(opt) > 1 {
 			prefixCheck = opt[1]
 		}
-		for _, xe := range m.eventHandlers[e.EventName] {
+		for _, xe := range o.eventHandlers[e.EventName] {
 			if prefixCheck {
 				if strings.HasPrefix(xe.ID, e.ID) {
 					return
@@ -414,23 +414,23 @@ func (m *Manager) addHandler(e *EventHandler, opt ...bool) {
 				}
 			}
 		}
-		m.eventHandlers[e.EventName] = append(m.eventHandlers[e.EventName], e)
-		m.eventHandlers[e.EventName].Sort()
+		o.eventHandlers[e.EventName] = append(o.eventHandlers[e.EventName], e)
+		o.eventHandlers[e.EventName].Sort()
 	} else {
-		m.eventHandlers[e.EventName] = append(m.eventHandlers[e.EventName], e)
-		m.eventHandlers[e.EventName].Sort()
+		o.eventHandlers[e.EventName] = append(o.eventHandlers[e.EventName], e)
+		o.eventHandlers[e.EventName].Sort()
 	}
 }
 
 // Triggers an event with the given data and context and logs
 // potential errors but doesn't return them
-func (m *Manager) TriggerCatch(name string, ctx *EventCtx, logger *logrus.Logger) uint64 {
-	m.mux.RLock()
-	defer m.mux.RUnlock()
-	res, err := m.trigger(name, ctx)
+func (o *Observer) TriggerCatch(name string, ctx *EventCtx, logger *logrus.Logger) uint64 {
+	o.mux.RLock()
+	defer o.mux.RUnlock()
+	res, err := o.trigger(name, ctx)
 
 	if logger == nil {
-		logger = m.log
+		logger = o.log
 	}
 	if err != nil && logger != nil {
 		logger.WithFields(logrus.Fields{
@@ -443,25 +443,25 @@ func (m *Manager) TriggerCatch(name string, ctx *EventCtx, logger *logrus.Logger
 }
 
 // Triggers an event with the given data and context
-func (m *Manager) Trigger(name string, ctx *EventCtx) (uint64, error) {
-	m.mux.RLock()
-	defer m.mux.RUnlock()
-	return m.trigger(name, ctx)
+func (o *Observer) Trigger(name string, ctx *EventCtx) (uint64, error) {
+	o.mux.RLock()
+	defer o.mux.RUnlock()
+	return o.trigger(name, ctx)
 }
 
-func (m *Manager) trigger(name string, ctx *EventCtx) (uint64, error) {
+func (o *Observer) trigger(name string, ctx *EventCtx) (uint64, error) {
 	if ctx == nil {
 		return 0, nil
 	}
 	if ctx.err != nil {
 		return ctx.Interations, ctx.err
 	}
-	el, ok := m.eventHandlers[name]
+	el, ok := o.eventHandlers[name]
 	if !ok || len(el) < 1 {
 		return ctx.Interations, ctx.err
 	}
 	ctx.EventName = name
-	if err := ctx.addEventSource(name, m.allowRecursion); err != nil {
+	if err := ctx.addEventSource(name, o.allowRecursion); err != nil {
 		// also checks for recursion and stops if not allowed
 		ctx.err = err
 		return ctx.Interations, ctx.err
@@ -479,19 +479,19 @@ func (m *Manager) trigger(name string, ctx *EventCtx) (uint64, error) {
 		}
 		// using address of the event handler as unique ID
 		callerID := fmt.Sprintf("%p", e)
-		if !m.allowRecursion && ctx.CallStack.Contains(callerID) {
+		if !o.allowRecursion && ctx.CallStack.Contains(callerID) {
 			ctx.err = ErrRecursionNotAllowed
 			return ctx.Interations, ctx.err
 		}
-		if m.callstackLimit > 0 && len(ctx.CallStack) >= m.callstackLimit {
+		if o.callstackLimit > 0 && len(ctx.CallStack) >= o.callstackLimit {
 			ctx.err = ErrCallstackLimitExeeded
 			return ctx.Interations, ctx.err
 		}
 		if ctx.StopPropagation {
 			return ctx.Interations, ctx.err
 		}
-		if m.log != nil {
-			m.log.WithFields(logrus.Fields{
+		if o.log != nil {
+			o.log.WithFields(logrus.Fields{
 				"caller_id": callerID,
 				"event":     e.EventName,
 				"event_id":  e.ID,
@@ -505,7 +505,7 @@ func (m *Manager) trigger(name string, ctx *EventCtx) (uint64, error) {
 	return ctx.Interations, ctx.err
 }
 
-var _ Observer = &ObserverMock{}
+var _ IObserver = &ObserverMock{}
 
 type ObserverMock struct {
 	Observer

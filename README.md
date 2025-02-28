@@ -15,11 +15,11 @@ import (
 )
 
 func main() {
-	evmInstance := evm.NewEventManager(nil)
+	observerInstace := evm.NewObserver(nil)
 
 	// Add multiple event handlers / hooks
-	// use "evmInstance.AddEventHandler(evm.EventHandler{..})" to add a  single event handle
-	evmInstance.AddHandlers([]*evm.EventHandler{
+	// use "observerInstace.AddEventHandler(evm.EventHandler{..})" to add a  single event handle
+	observerInstace.AddHandlers([]*evm.EventHandler{
 		// Multiple handlers for the same event, handlers will be executed by their given order
 		{
 			EventName: "event_a",
@@ -65,7 +65,7 @@ func main() {
 	ectx := evm.NewEventContext(goCtx)
 
 	// Trigger an event
-	cnt, err := evmInstance.Trigger("event_a", ectx)
+	cnt, err := observerInstace.Trigger("event_a", ectx)
 	if err != nil {
 		log.Panic(err)
 	}

@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	evmInstance := evm.NewEventManager(nil)
+	evmInstance := evm.NewObserver(nil)
 
 	// Add multiple event handlers / hooks
 	// use "evmInstance.AddEventHandler(evm.EventHandler{..})" to add a  single event handle
