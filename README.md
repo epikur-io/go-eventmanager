@@ -15,11 +15,11 @@ import (
 )
 
 func main() {
-	observerInstace := evm.NewObserver(nil)
+	observer := evm.NewObserver(nil)
 
 	// Add multiple event handlers / hooks
-	// use "observerInstace.AddEventHandler(evm.EventHandler{..})" to add a  single event handle
-	observerInstace.AddHandlers([]*evm.EventHandler{
+	// use "evmInstance.AddEventHandler(evm.EventHandler{..})" to add a  single event handle
+	observer.AddHandlers([]*evm.EventHandler{
 		// Multiple handlers for the same event, handlers will be executed by their given order
 		{
 			EventName: "event_a",
@@ -61,16 +61,15 @@ func main() {
 	})
 
 	// context with 1 second timeout
-	goCtx, _ := context.WithTimeout(context.Background(), time.Second*1)
-	ectx := evm.NewEventContext(goCtx)
+	expiry, _ := context.WithTimeout(context.Background(), time.Second*1)
+	ectx := evm.NewEventContext(expiry)
 
 	// Trigger an event
-	cnt, err := observerInstace.Trigger("event_a", ectx)
+	cnt, err := observer.Trigger("event_a", ectx)
 	if err != nil {
 		log.Panic(err)
 	}
 	log.Printf("Executed %d handlers\n", cnt)
 	log.Printf("Datetime:  %v\n", ectx.Data["datetime"])
-
 }
 ```
