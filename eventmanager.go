@@ -115,6 +115,7 @@ func (s EventHandlerList) Less(i, j int) bool {
 
 type IObserver interface {
 	AllowRecursion(allow bool)
+	SetCallstackLimit(size int)
 	RegisteredHandlers() map[string]EventHandlerList
 	DeleteAll()
 	DeleteByEvent(eventName string)
@@ -166,6 +167,13 @@ func (o *Observer) init() {
 func (o *Observer) AllowRecursion(allow bool) {
 	o.mux.Lock()
 	o.allowRecursion = allow
+	o.mux.Unlock()
+}
+
+// Allows recursive executuion of event handlers debending on the setting
+func (o *Observer) SetCallstackLimit(size int) {
+	o.mux.Lock()
+	o.callstackLimit = size
 	o.mux.Unlock()
 }
 
