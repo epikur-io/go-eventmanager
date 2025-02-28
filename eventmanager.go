@@ -44,7 +44,18 @@ func (c CallStack) Contains(callerID string) bool {
 }
 
 // EventData holds custom data which the EventHandler can work on
-type EventData = map[string]any
+type EventData map[string]any
+
+func (ed EventData) Get(key string) any {
+	if v, found := ed[key]; found {
+		return v
+	}
+	return nil
+}
+
+func (ed EventData) Set(key string, val any) {
+	ed[key] = val
+}
 
 // EventCtx stores internal information
 type EventCtx struct {
