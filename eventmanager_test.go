@@ -116,7 +116,7 @@ func TestRecursionNotAllowed(t *testing.T) {
 			Func: func(ctx *EventCtx) {
 				commonEventHandler(ctx)
 				ctx.Data["test"] = testVal
-				evm.Trigger("event_b", ctx)
+				evm.TriggerCatch("event_b", ctx)
 			},
 			Order: 200,
 		},
@@ -126,7 +126,7 @@ func TestRecursionNotAllowed(t *testing.T) {
 			Func: func(ctx *EventCtx) {
 				commonEventHandler(ctx)
 				ctx.Data["test"] = testVal + ".event_b"
-				evm.Trigger("event_a", ctx)
+				evm.TriggerCatch("event_a", ctx)
 			},
 			Order: 200,
 		},
@@ -171,7 +171,7 @@ func TestRecursionCallLimit(t *testing.T) {
 			ID:        "id2",
 			Func: func(ctx *EventCtx) {
 				incr()
-				evm.Trigger("event_b", ctx)
+				evm.TriggerCatch("event_b", ctx)
 			},
 			Order: 200,
 		},
@@ -180,7 +180,7 @@ func TestRecursionCallLimit(t *testing.T) {
 			ID:        "id1",
 			Func: func(ctx *EventCtx) {
 				incr()
-				evm.Trigger("event_a", ctx)
+				evm.TriggerCatch("event_a", ctx)
 			},
 			Order: 200,
 		},
