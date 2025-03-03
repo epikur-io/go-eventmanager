@@ -137,8 +137,8 @@ type IObserver interface {
 	CountByIDPrefix(prefix string) uint64
 	CountByEventAndID(eventName string, id string) uint64
 	CountByEventAndIDPrefix(eventName string, prefix string) uint64
-	AddHandlers(eventHandlers []EventHandler, opt ...bool)
-	AddEventHandler(eventHandler EventHandler, opt ...bool)
+	AddHandlers(eventHandlers []EventHandler, opt ...bool) error
+	AddEventHandler(eventHandler EventHandler, opt ...bool) error
 	Trigger(eventName string, ctx *EventCtx) (uint64, error)
 	TriggerCatch(eventName string, ctx *EventCtx) uint64
 }
@@ -402,30 +402,38 @@ func (o *Observer) CountByEventAndIDPrefix(event string, prefix string) uint64 {
 	return found
 }
 
-func (o *Observer) AddHandlers(es []EventHandler, opt ...bool) {
+func (o *Observer) AddHandlers(es []EventHandler, opt ...bool) error {
 	o.mux.Lock()
 	defer o.mux.Unlock()
+	errList := []string{}
 	for _, e := range es {
-		o.addHandler(&e, opt...)
+		err := o.addHandler(&e, opt...)
+		if err != nil {
+			errList = append(errList, err.Error())
+		}
 	}
+	if len(errList) > 0 {
+		return fmt.Errorf("failed to add event handlers, got errors:\n%s", strings.Join(errList, "\n"))
+	}
+	return nil
 }
 
-func (o *Observer) AddEventHandler(e EventHandler, opt ...bool) {
+func (o *Observer) AddEventHandler(e EventHandler, opt ...bool) error {
 	o.mux.Lock()
 	defer o.mux.Unlock()
-	o.addHandler(&e, opt...)
+	return o.addHandler(&e, opt...)
 }
 
 // AddEventHandler adds an event handler to the event Manager
 // the provided function must not start goroutines that trigger other events
 // that use references of the event or event context!
-func (o *Observer) addHandler(e *EventHandler, opt ...bool) {
+func (o *Observer) addHandler(e *EventHandler, opt ...bool) error {
 	// !TODO remove "opt" parameter or rename it to prefixCheck (better naming)
 	if e == nil {
-		return
+		return fmt.Errorf("missing event handler")
 	}
 	if e.Func == nil {
-		return
+		return fmt.Errorf("missing function for event handler")
 	}
 	_, ok := o.eventHandlers[e.EventName]
 	if !ok {
@@ -439,11 +447,11 @@ func (o *Observer) addHandler(e *EventHandler, opt ...bool) {
 		for _, xe := range o.eventHandlers[e.EventName] {
 			if prefixCheck {
 				if strings.HasPrefix(xe.ID, e.ID) {
-					return
+					return fmt.Errorf("event handler \"%s\" with the same id prefix \"%s\" is already registered", xe.ID, e.ID)
 				}
 			} else {
 				if xe.ID == e.ID {
-					return
+					return fmt.Errorf("event handler with the same id \"%s\" is already registered", e.ID)
 				}
 			}
 		}
@@ -452,6 +460,24 @@ func (o *Observer) addHandler(e *EventHandler, opt ...bool) {
 	} else {
 		o.eventHandlers[e.EventName] = append(o.eventHandlers[e.EventName], e)
 		o.eventHandlers[e.EventName].Sort()
+	}
+	return nil
+}
+
+func (o *Observer) ReplaceHandlersByID(es []EventHandler, opt ...bool) {
+	o.mux.Lock()
+	defer o.mux.Unlock()
+	for _, e := range es {
+		o.deleteByID(e.ID)
+		_ = o.addHandler(&e, opt...)
+	}
+}
+func (o *Observer) ReplaceHandlersByEventAndID(es []EventHandler, opt ...bool) {
+	o.mux.Lock()
+	defer o.mux.Unlock()
+	for _, e := range es {
+		o.deleteByEventAndID(e.EventName, e.ID)
+		_ = o.addHandler(&e, opt...)
 	}
 }
 
@@ -465,7 +491,7 @@ func (o *Observer) TriggerCatch(name string, ctx *EventCtx) uint64 {
 	if err != nil && o.config.hasLog {
 		o.config.logger.Error().
 			Str("event", name).
-			Str("error_message", err.Error()).
+			Err(err).
 			Msg("event execution failed")
 	}
 	return res
@@ -551,8 +577,8 @@ func (m *ObserverMock) CountByID(id string) uint64                              
 func (m *ObserverMock) CountByIDPrefix(prefix string) uint64                       { return 0 }
 func (m *ObserverMock) CountByEventAndID(event string, id string) uint64           { return 0 }
 func (m *ObserverMock) CountByEventAndIDPrefix(event string, prefix string) uint64 { return 0 }
-func (m *ObserverMock) AddHandlers(es []EventHandler, opt ...bool)                 {}
-func (m *ObserverMock) AddEventHandler(e EventHandler, opt ...bool)                {}
+func (m *ObserverMock) AddHandlers(es []EventHandler, opt ...bool) error           { return nil }
+func (m *ObserverMock) AddEventHandler(e EventHandler, opt ...bool) error          { return nil }
 func (m *ObserverMock) Trigger(name string, ctx *EventCtx) (uint64, error) {
 	return 0, nil
 }
