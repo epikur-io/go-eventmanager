@@ -3,17 +3,20 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 	"time"
 
 	evm "github.com/epikur-io/go-eventmanager"
+	"github.com/rs/zerolog"
 )
 
 func main() {
-	observer := evm.NewObserver(nil)
+	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
+	observer := evm.NewObserver(evm.WithLogger(logger))
 
 	// Add multiple event handlers / hooks
 	// use "evmInstance.AddEventHandler(evm.EventHandler{..})" to add a  single event handle
-	observer.AddHandlers([]*evm.EventHandler{
+	observer.AddHandlers([]evm.EventHandler{
 		// Multiple handlers for the same event, handlers will be executed by their given order
 		{
 			EventName: "event_a",

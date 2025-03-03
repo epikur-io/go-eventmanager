@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
 // A thread-safe event manager using the observer pattern.
@@ -140,25 +140,56 @@ type IObserver interface {
 	AddHandlers(eventHandlers []EventHandler, opt ...bool)
 	AddEventHandler(eventHandler EventHandler, opt ...bool)
 	Trigger(eventName string, ctx *EventCtx) (uint64, error)
-	TriggerCatch(eventName string, ctx *EventCtx, log *logrus.Logger) uint64
+	TriggerCatch(eventName string, ctx *EventCtx) uint64
 }
 
 // esnure our implementation satisfies the Observer interface
 var _ IObserver = &Observer{}
 
-// Observer manages the event/event chains
-type Observer struct {
-	eventHandlers  map[string]EventHandlerList // Event handler map
-	callstackLimit int                         // The max number of callback per event
-	allowRecursion bool                        // disabled by default
-	log            *logrus.Logger
-	mux            *sync.RWMutex
+type Config struct {
+	logger         zerolog.Logger
+	callstackLimit int  // The max number of callback per event
+	allowRecursion bool // disabled by default
+	hasLog         bool
 }
 
-func NewObserver(log *logrus.Logger) *Observer {
-	o := &Observer{
-		log: log,
+type Option func(*Config)
+
+func WithLogger(l zerolog.Logger) Option {
+	return func(c *Config) {
+		c.logger = l
+		c.hasLog = true
 	}
+}
+
+func WithCallstackLimit(l int) Option {
+	return func(c *Config) {
+		c.callstackLimit = l
+	}
+}
+
+func WithRecursionAllowed() Option {
+	return func(c *Config) {
+		c.allowRecursion = true
+	}
+}
+
+// Observer manages the event/event chains
+type Observer struct {
+	eventHandlers map[string]EventHandlerList // Event handler map
+	config        Config
+	mux           *sync.RWMutex
+}
+
+func NewObserver(opts ...Option) *Observer {
+	o := &Observer{
+		config: Config{},
+	}
+
+	for _, opt := range opts {
+		opt(&o.config)
+	}
+
 	o.init()
 	return o
 }
@@ -167,22 +198,22 @@ func NewObserver(log *logrus.Logger) *Observer {
 func (o *Observer) init() {
 	o.mux = &sync.RWMutex{}
 	o.eventHandlers = make(map[string]EventHandlerList)
-	if o.callstackLimit < 1 {
-		o.callstackLimit = int(DefaultCallstackLimit)
+	if o.config.callstackLimit < 1 {
+		o.config.callstackLimit = int(DefaultCallstackLimit)
 	}
 }
 
 // Allows recursive executuion of event handlers debending on the setting
 func (o *Observer) AllowRecursion(allow bool) {
 	o.mux.Lock()
-	o.allowRecursion = allow
+	o.config.allowRecursion = allow
 	o.mux.Unlock()
 }
 
 // Allows recursive executuion of event handlers debending on the setting
 func (o *Observer) SetCallstackLimit(size int) {
 	o.mux.Lock()
-	o.callstackLimit = size
+	o.config.callstackLimit = size
 	o.mux.Unlock()
 }
 
@@ -424,19 +455,16 @@ func (o *Observer) addHandler(e *EventHandler, opt ...bool) {
 
 // Triggers an event with the given data and context and logs
 // potential errors but doesn't return them
-func (o *Observer) TriggerCatch(name string, ctx *EventCtx, logger *logrus.Logger) uint64 {
+func (o *Observer) TriggerCatch(name string, ctx *EventCtx) uint64 {
 	o.mux.RLock()
 	defer o.mux.RUnlock()
 	res, err := o.trigger(name, ctx)
 
-	if logger == nil {
-		logger = o.log
-	}
-	if err != nil && logger != nil {
-		logger.WithFields(logrus.Fields{
-			"event_name":    name,
-			"error_message": err.Error(),
-		}).Error("event execution failed")
+	if err != nil && o.config.hasLog {
+		o.config.logger.Error().
+			Str("event", name).
+			Str("error_message", err.Error()).
+			Msg("event execution failed")
 	}
 	return res
 
@@ -461,7 +489,7 @@ func (o *Observer) trigger(name string, ctx *EventCtx) (uint64, error) {
 		return ctx.Interations, ctx.err
 	}
 	ctx.EventName = name
-	if err := ctx.addEventSource(name, o.allowRecursion); err != nil {
+	if err := ctx.addEventSource(name, o.config.allowRecursion); err != nil {
 		// also checks for recursion and stops if not allowed
 		ctx.err = err
 		return ctx.Interations, ctx.err
@@ -478,26 +506,26 @@ func (o *Observer) trigger(name string, ctx *EventCtx) (uint64, error) {
 			return ctx.Interations, ctx.err
 		}
 		// using address of the event handler as unique ID
-		callerID := fmt.Sprintf("%p", e)
-		if !o.allowRecursion && ctx.CallStack.Contains(callerID) {
+		handlerID := fmt.Sprintf("%p", e)
+		if !o.config.allowRecursion && ctx.CallStack.Contains(handlerID) {
 			ctx.err = ErrRecursionNotAllowed
 			return ctx.Interations, ctx.err
 		}
-		if o.callstackLimit > 0 && len(ctx.CallStack) >= o.callstackLimit {
+		if o.config.callstackLimit > 0 && len(ctx.CallStack) >= o.config.callstackLimit {
 			ctx.err = ErrCallstackLimitExeeded
 			return ctx.Interations, ctx.err
 		}
 		if ctx.StopPropagation {
 			return ctx.Interations, ctx.err
 		}
-		if o.log != nil {
-			o.log.WithFields(logrus.Fields{
-				"caller_id": callerID,
-				"event":     e.EventName,
-				"event_id":  e.ID,
-			}).Debug("executing event handler")
+		if o.config.hasLog {
+			o.config.logger.Debug().
+				Str("event", e.EventName).
+				Str("event_id", e.ID).
+				Str("handler_id", handlerID).
+				Msg("executing event handler")
 		}
-		ctx.pushCallStack(callerID)
+		ctx.pushCallStack(handlerID)
 		ctx.HandlerID = e.ID
 		e.Func(ctx)
 		ctx.Interations += 1
@@ -526,6 +554,6 @@ func (m *ObserverMock) AddEventHandler(e EventHandler, opt ...bool)             
 func (m *ObserverMock) Trigger(name string, ctx *EventCtx) (uint64, error) {
 	return 0, nil
 }
-func (m *ObserverMock) TriggerCatch(name string, ctx *EventCtx, log *logrus.Logger) uint64 {
+func (m *ObserverMock) TriggerCatch(name string, ctx *EventCtx) uint64 {
 	return 0
 }
