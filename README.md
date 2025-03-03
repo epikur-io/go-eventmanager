@@ -64,7 +64,8 @@ func main() {
 	})
 
 	// context with 1 second timeout
-	expiry, _ := context.WithTimeout(context.Background(), time.Second*1)
+	expiry, cancel := context.WithTimeout(context.Background(), time.Second*1)
+	defer cancel()
 	ectx := evm.NewEventContext(expiry)
 
 	// Trigger an event

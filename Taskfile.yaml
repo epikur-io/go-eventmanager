@@ -1,0 +1,29 @@
+version: '3'
+
+tasks:
+  cleanup:
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - go mod tidy
+      - rm -f test_coverage.out
+
+  test:
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - go test -v ./...
+
+  test:coverage:
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - go test -v -cover ./... -coverprofile=test_coverage.out
+      - go tool cover -html=test_coverage.out
+
+  vet:
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - go vet ./...
+
+  lint:
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - golangci-lint run ./...
