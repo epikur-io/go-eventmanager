@@ -19,7 +19,7 @@ func main() {
 
 	// Add multiple event handlers / hooks
 	// use "evmInstance.AddEventHandler(evm.EventHandler{..})" to add a  single event handle
-	observer.AddHandlers([]*evm.EventHandler{
+	observer.AddHandlers([]evm.EventHandler{
 		// Multiple handlers for the same event, handlers will be executed by their given order
 		{
 			EventName: "event_a",
@@ -72,4 +72,5 @@ func main() {
 	log.Printf("Executed %d handlers\n", cnt)
 	log.Printf("Datetime:  %v\n", ectx.Data["datetime"])
 }
+
 ```

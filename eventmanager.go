@@ -137,10 +137,8 @@ type IObserver interface {
 	CountByIDPrefix(prefix string) uint64
 	CountByEventAndID(eventName string, id string) uint64
 	CountByEventAndIDPrefix(eventName string, prefix string) uint64
-	ReplaceHandlersByID(eventHandlers []*EventHandler, opt ...bool)
-	ReplaceHandlersByEventAndID(eventHandlers []*EventHandler, opt ...bool)
-	AddHandlers(eventHandlers []*EventHandler, opt ...bool)
-	AddEventHandler(eventHandler *EventHandler, opt ...bool)
+	AddHandlers(eventHandlers []EventHandler, opt ...bool)
+	AddEventHandler(eventHandler EventHandler, opt ...bool)
 	Trigger(eventName string, ctx *EventCtx) (uint64, error)
 	TriggerCatch(eventName string, ctx *EventCtx, log *logrus.Logger) uint64
 }
@@ -371,35 +369,18 @@ func (o *Observer) CountByEventAndIDPrefix(event string, prefix string) uint64 {
 	return found
 }
 
-func (o *Observer) ReplaceHandlersByEventAndID(es []*EventHandler, opt ...bool) {
+func (o *Observer) AddHandlers(es []EventHandler, opt ...bool) {
 	o.mux.Lock()
 	defer o.mux.Unlock()
 	for _, e := range es {
-		o.deleteByEventAndID(e.EventName, e.ID)
-		o.addHandler(e, opt...)
-	}
-}
-func (o *Observer) ReplaceHandlersByID(es []*EventHandler, opt ...bool) {
-	o.mux.Lock()
-	defer o.mux.Unlock()
-	for _, e := range es {
-		o.deleteByID(e.ID)
-		o.addHandler(e, opt...)
+		o.addHandler(&e, opt...)
 	}
 }
 
-func (o *Observer) AddHandlers(es []*EventHandler, opt ...bool) {
+func (o *Observer) AddEventHandler(e EventHandler, opt ...bool) {
 	o.mux.Lock()
 	defer o.mux.Unlock()
-	for _, e := range es {
-		o.addHandler(e, opt...)
-	}
-}
-
-func (o *Observer) AddEventHandler(e *EventHandler, opt ...bool) {
-	o.mux.Lock()
-	defer o.mux.Unlock()
-	o.addHandler(e, opt...)
+	o.addHandler(&e, opt...)
 }
 
 // AddEventHandler adds an event handler to the event Manager
@@ -530,20 +511,18 @@ type ObserverMock struct {
 	Observer
 }
 
-func (m *ObserverMock) RegisteredHandlers() map[string]EventHandlerList             { return nil }
-func (m *ObserverMock) DeleteAll()                                                  {}
-func (m *ObserverMock) DeleteByEvent(ei string)                                     {}
-func (m *ObserverMock) DeleteByEventAndID(ei string, id string)                     {}
-func (m *ObserverMock) DeleteByID(id string) uint64                                 { return uint64(0) }
-func (m *ObserverMock) DeleteByIDPrefix(prefix string) uint64                       { return uint64(0) }
-func (m *ObserverMock) CountByID(id string) uint64                                  { return 0 }
-func (m *ObserverMock) CountByIDPrefix(prefix string) uint64                        { return 0 }
-func (m *ObserverMock) CountByEventAndID(event string, id string) uint64            { return 0 }
-func (m *ObserverMock) CountByEventAndIDPrefix(event string, prefix string) uint64  { return 0 }
-func (m *ObserverMock) ReplaceHandlersByID(es []*EventHandler, opt ...bool)         {}
-func (m *ObserverMock) ReplaceHandlersByEventAndID(es []*EventHandler, opt ...bool) {}
-func (m *ObserverMock) AddHandlers(es []*EventHandler, opt ...bool)                 {}
-func (m *ObserverMock) AddEventHandler(e *EventHandler, opt ...bool)                {}
+func (m *ObserverMock) RegisteredHandlers() map[string]EventHandlerList            { return nil }
+func (m *ObserverMock) DeleteAll()                                                 {}
+func (m *ObserverMock) DeleteByEvent(ei string)                                    {}
+func (m *ObserverMock) DeleteByEventAndID(ei string, id string)                    {}
+func (m *ObserverMock) DeleteByID(id string) uint64                                { return uint64(0) }
+func (m *ObserverMock) DeleteByIDPrefix(prefix string) uint64                      { return uint64(0) }
+func (m *ObserverMock) CountByID(id string) uint64                                 { return 0 }
+func (m *ObserverMock) CountByIDPrefix(prefix string) uint64                       { return 0 }
+func (m *ObserverMock) CountByEventAndID(event string, id string) uint64           { return 0 }
+func (m *ObserverMock) CountByEventAndIDPrefix(event string, prefix string) uint64 { return 0 }
+func (m *ObserverMock) AddHandlers(es []EventHandler, opt ...bool)                 {}
+func (m *ObserverMock) AddEventHandler(e EventHandler, opt ...bool)                {}
 func (m *ObserverMock) Trigger(name string, ctx *EventCtx) (uint64, error) {
 	return 0, nil
 }
