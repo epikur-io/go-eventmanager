@@ -146,30 +146,30 @@ type IObserver interface {
 // esnure our implementation satisfies the Observer interface
 var _ IObserver = &Observer{}
 
-type Config struct {
+type config struct {
 	logger         zerolog.Logger
 	callstackLimit int  // The max number of callback per event
 	allowRecursion bool // disabled by default
 	hasLog         bool
 }
 
-type Option func(*Config)
+type option func(*config)
 
-func WithLogger(l zerolog.Logger) Option {
-	return func(c *Config) {
+func WithLogger(l zerolog.Logger) option {
+	return func(c *config) {
 		c.logger = l
 		c.hasLog = true
 	}
 }
 
-func WithCallstackLimit(l int) Option {
-	return func(c *Config) {
+func WithCallstackLimit(l int) option {
+	return func(c *config) {
 		c.callstackLimit = l
 	}
 }
 
-func WithRecursionAllowed() Option {
-	return func(c *Config) {
+func WithRecursionAllowed() option {
+	return func(c *config) {
 		c.allowRecursion = true
 	}
 }
@@ -177,17 +177,19 @@ func WithRecursionAllowed() Option {
 // Observer manages the event/event chains
 type Observer struct {
 	eventHandlers map[string]EventHandlerList // Event handler map
-	config        Config
+	config        config
 	mux           *sync.RWMutex
 }
 
-func NewObserver(opts ...Option) *Observer {
+func NewObserver(opts ...option) *Observer {
 	o := &Observer{
-		config: Config{},
+		config: config{},
 	}
 
 	for _, opt := range opts {
-		opt(&o.config)
+		if opt != nil {
+			opt(&o.config)
+		}
 	}
 
 	o.init()

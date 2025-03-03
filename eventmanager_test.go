@@ -11,7 +11,7 @@ type Counter struct {
 }
 
 func TestEnforceIDUniqueness(t *testing.T) {
-	evm := NewObserver(nil)
+	evm := NewObserver()
 	evm.AddHandlers([]EventHandler{
 		{
 			EventName: "event_b",
@@ -30,7 +30,7 @@ func TestEnforceIDUniqueness(t *testing.T) {
 }
 
 func TestCountByEventAndID(t *testing.T) {
-	evm := NewObserver(nil)
+	evm := NewObserver()
 	evm.AddHandlers([]EventHandler{
 		{
 			EventName: "event_a",
@@ -57,7 +57,7 @@ func TestCountByEventAndID(t *testing.T) {
 }
 
 func TestCountByEventAndIDPrefix(t *testing.T) {
-	evm := NewObserver(nil)
+	evm := NewObserver()
 	evm.AddHandlers([]EventHandler{
 		{
 			EventName: "event_b",
@@ -75,7 +75,7 @@ func TestCountByEventAndIDPrefix(t *testing.T) {
 	}
 }
 func TestDeleteByID(t *testing.T) {
-	evm := NewObserver(nil)
+	evm := NewObserver()
 	evm.AddHandlers([]EventHandler{
 		{
 			EventName: "event_b",
@@ -94,8 +94,7 @@ func TestDeleteByID(t *testing.T) {
 }
 
 func TestRecursionNotAllowed(t *testing.T) {
-	evm := NewObserver(nil)
-	evm.AllowRecursion(false)
+	evm := NewObserver()
 
 	commonEventHandler := func(ctx *EventCtx) {
 		if d, ok := ctx.Data["counter"].(*Counter); ok && d != nil {
@@ -152,8 +151,7 @@ func TestRecursionNotAllowed(t *testing.T) {
 
 }
 func TestRecursionCallLimit(t *testing.T) {
-	evm := NewObserver(nil)
-	evm.AllowRecursion(true)
+	evm := NewObserver(WithRecursionAllowed())
 
 	counter := 0
 	incr := func() {
@@ -202,7 +200,7 @@ func TestRecursionCallLimit(t *testing.T) {
 }
 
 func TestContextTimeout(t *testing.T) {
-	evm := NewObserver(nil)
+	evm := NewObserver()
 
 	evm.AddHandlers([]EventHandler{
 		{
