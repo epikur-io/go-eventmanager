@@ -23,7 +23,17 @@ tasks:
     cmds:
       - go vet ./...
 
+  # see `golangci-lint help linters` to see all linters
+  # Pass -E/--enable to enable linter and -D/--disable to disable:
+  # `golangci-lint run --disable-all -E errcheck`
+  # using all checks and verbose output: $ golangci-lint run ./... --enable-all
   lint:
     dir: '{{.TASKFILE_DIR}}'
     cmds:
       - golangci-lint run ./...
+    
+  # installing development & ci dependencies
+  install:deps:
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.6

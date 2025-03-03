@@ -22,7 +22,7 @@ func main() {
 
 	// Add multiple event handlers / hooks
 	// use "evmInstance.AddEventHandler(evm.EventHandler{..})" to add a  single event handle
-	observer.AddHandlers([]evm.EventHandler{
+	err := observer.AddHandlers([]evm.EventHandler{
 		// Multiple handlers for the same event, handlers will be executed by their given order
 		{
 			EventName: "event_a",
@@ -45,7 +45,7 @@ func main() {
 				// do some additional work on the data provided by the previous handler
 				datetime, ok := ctx.Data["datetime"].(time.Time)
 				if ok {
-					ctx.Data["datetime"] = datetime.Add(time.Minute * 60 * 24)
+					ctx.Data["datetime"] = datetime.Add(time.Hour * 24)
 				}
 
 				// This will stop further execution of following event handlers
@@ -62,6 +62,9 @@ func main() {
 			},
 		},
 	})
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	// context with 1 second timeout
 	expiry, cancel := context.WithTimeout(context.Background(), time.Second*1)
