@@ -30,6 +30,7 @@ const (
 var (
 	ErrRecursionNotAllowed   = errors.New("recursion is not allowed")
 	ErrCallstackLimitExeeded = errors.New("callstack limit exceeded")
+	ErrMissingEventCtx       = errors.New("missing event context")
 )
 
 type CallStack []string
@@ -507,7 +508,7 @@ func (o *Observer) Trigger(name string, ctx *EventCtx) (uint64, error) {
 
 func (o *Observer) trigger(name string, ctx *EventCtx) (uint64, error) {
 	if ctx == nil {
-		return 0, nil
+		return 0, ErrMissingEventCtx
 	}
 	if ctx.err != nil {
 		return ctx.Interations, ctx.err
