@@ -44,7 +44,7 @@ func main() {
 
 				observer.Trigger("event_b", ctx)
 				// This will stop further execution of following event handlers
-				//ctx.StopPropagation = true
+				ctx.StopPropagation = true
 			},
 		},
 		{
@@ -53,6 +53,11 @@ func main() {
 			Order:     1,
 			Func: func(ctx *evm.EventCtx) {
 				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
+
+				// This will stop the execution of
+				// subsequent event handlers and return an error, because
+				// we're still in the "event_a" chain and recursive triggering of events is not allowed
+				// observer.Trigger("event_a", ctx)
 			},
 		},
 		{
