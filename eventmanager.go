@@ -65,9 +65,9 @@ type EventCtx struct {
 	// HandlerID of the current handler that gets executed
 	HandlerID       string
 	GoContext       context.Context
-	Interations     uint64
-	CallStack       CallStack
-	EventSourceMap  map[string]uint64
+	iterations      uint64
+	callStack       CallStack
+	eventSourceMap  map[string]uint64
 	StopPropagation bool
 	err             error
 	Data            EventData
@@ -77,27 +77,27 @@ type EventCtx struct {
 func NewEventContext(goCtx context.Context) *EventCtx {
 	ctx := &EventCtx{}
 	ctx.GoContext = goCtx
-	ctx.EventSourceMap = make(map[string]uint64)
+	ctx.eventSourceMap = make(map[string]uint64)
 	ctx.Data = make(map[string]interface{})
 	return ctx
 }
 
 func (ctx *EventCtx) pushCallStack(e string) {
-	ctx.CallStack = append(ctx.CallStack, e)
+	ctx.callStack = append(ctx.callStack, e)
 }
 
-func (ctx *EventCtx) Error() error {
+func (ctx *EventCtx) Err() error {
 	return ctx.err
 }
 
 func (ctx *EventCtx) addEventSource(e string, allowRecursion bool) error {
-	if _, ok := ctx.EventSourceMap[e]; ok {
-		ctx.EventSourceMap[e] += 1
-		if !allowRecursion && ctx.EventSourceMap[e] > 1 {
+	if _, ok := ctx.eventSourceMap[e]; ok {
+		ctx.eventSourceMap[e] += 1
+		if !allowRecursion && ctx.eventSourceMap[e] > 1 {
 			return fmt.Errorf("event source \"%s\" already exists", e)
 		}
 	}
-	ctx.EventSourceMap[e] = 1
+	ctx.eventSourceMap[e] = 1
 	return nil
 }
 
@@ -515,11 +515,11 @@ func (o *Observer) trigger(name string, ctx *EventCtx) (uint64, error) {
 		return 0, ErrMissingEventCtx
 	}
 	if ctx.err != nil {
-		return ctx.Interations, ctx.err
+		return ctx.iterations, ctx.err
 	}
 	el, ok := o.eventHandlers[name]
 	if !ok || len(el) < 1 {
-		return ctx.Interations, ctx.err
+		return ctx.iterations, ctx.err
 	}
 	currentEventName := name
 	// if ctx.EventName == "" {
@@ -528,31 +528,31 @@ func (o *Observer) trigger(name string, ctx *EventCtx) (uint64, error) {
 	if err := ctx.addEventSource(currentEventName, o.config.allowRecursion); err != nil {
 		// also checks for recursion and stops if not allowed
 		ctx.err = err
-		return ctx.Interations, ctx.err
+		return ctx.iterations, ctx.err
 	}
 	for _, e := range el {
 		if ctx.GoContext != nil {
 			select {
 			case <-ctx.GoContext.Done():
-				return ctx.Interations, ctx.GoContext.Err()
+				return ctx.iterations, ctx.GoContext.Err()
 			default:
 			}
 		}
 		if ctx.err != nil {
-			return ctx.Interations, ctx.err
+			return ctx.iterations, ctx.err
 		}
 		// using address of the event handler as unique ID
 		handlerID := fmt.Sprintf("%p", e)
-		if !o.config.allowRecursion && ctx.CallStack.Contains(handlerID) {
+		if !o.config.allowRecursion && ctx.callStack.Contains(handlerID) {
 			ctx.err = ErrRecursionNotAllowed
-			return ctx.Interations, ctx.err
+			return ctx.iterations, ctx.err
 		}
-		if o.config.callstackLimit > 0 && len(ctx.CallStack) >= o.config.callstackLimit {
+		if o.config.callstackLimit > 0 && len(ctx.callStack) >= o.config.callstackLimit {
 			ctx.err = ErrCallstackLimitExeeded
-			return ctx.Interations, ctx.err
+			return ctx.iterations, ctx.err
 		}
 		if ctx.StopPropagation {
-			return ctx.Interations, ctx.err
+			return ctx.iterations, ctx.err
 		}
 		if o.config.hasLog {
 			o.config.logger.Debug().
@@ -569,9 +569,9 @@ func (o *Observer) trigger(name string, ctx *EventCtx) (uint64, error) {
 		if sourceEventName != "" {
 			ctx.EventName = sourceEventName
 		}
-		ctx.Interations += 1
+		ctx.iterations += 1
 	}
-	return ctx.Interations, ctx.err
+	return ctx.iterations, ctx.err
 }
 
 var _ IObserver = &ObserverMock{}

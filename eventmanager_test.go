@@ -264,8 +264,8 @@ func TestContextTimeout(t *testing.T) {
 	}
 
 	// ensure the second event handler wasn't executed
-	if len(ectx.CallStack) > 1 {
-		t.Errorf("expected exactly one event handler to be executed but got %d executions", len(ectx.CallStack))
+	if len(ectx.callStack) > 1 {
+		t.Errorf("expected exactly one event handler to be executed but got %d executions", len(ectx.callStack))
 	}
 
 }
