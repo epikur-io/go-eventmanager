@@ -408,6 +408,10 @@ func (o *Observer) AddHandlers(es []EventHandler, opt ...bool) error {
 	defer o.mux.Unlock()
 	errList := []string{}
 	for _, e := range es {
+		// // automatic order
+		// if e.Order == 0 {
+		// 	e.Order = i
+		// }
 		err := o.addHandler(&e, opt...)
 		if err != nil {
 			errList = append(errList, err.Error())
@@ -517,8 +521,11 @@ func (o *Observer) trigger(name string, ctx *EventCtx) (uint64, error) {
 	if !ok || len(el) < 1 {
 		return ctx.Interations, ctx.err
 	}
-	ctx.EventName = name
-	if err := ctx.addEventSource(name, o.config.allowRecursion); err != nil {
+	currentEventName := name
+	// if ctx.EventName == "" {
+	// 	ctx.EventName = sourceEventName
+	// }
+	if err := ctx.addEventSource(currentEventName, o.config.allowRecursion); err != nil {
 		// also checks for recursion and stops if not allowed
 		ctx.err = err
 		return ctx.Interations, ctx.err
@@ -556,7 +563,12 @@ func (o *Observer) trigger(name string, ctx *EventCtx) (uint64, error) {
 		}
 		ctx.pushCallStack(handlerID)
 		ctx.HandlerID = e.ID
+		sourceEventName := ctx.EventName
+		ctx.EventName = currentEventName
 		e.Func(ctx)
+		if sourceEventName != "" {
+			ctx.EventName = sourceEventName
+		}
 		ctx.Interations += 1
 	}
 	return ctx.Interations, ctx.err

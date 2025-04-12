@@ -42,14 +42,23 @@ func main() {
 					ctx.Data["datetime"] = datetime.Add(time.Hour * 24)
 				}
 
+				observer.Trigger("event_b", ctx)
 				// This will stop further execution of following event handlers
-				ctx.StopPropagation = true
+				//ctx.StopPropagation = true
+			},
+		},
+		{
+			EventName: "event_b",
+			ID:        "first_handler",
+			Order:     1,
+			Func: func(ctx *evm.EventCtx) {
+				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
 			},
 		},
 		{
 			EventName: "event_a",
 			ID:        "third_handler",
-			Order:     2,
+			Order:     3,
 			Func: func(ctx *evm.EventCtx) {
 				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
 				// this should not be executed
