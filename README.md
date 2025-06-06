@@ -26,8 +26,8 @@ func main() {
 		// Multiple handlers for the same event, handlers will be executed by their given order
 		{
 			EventName: "event_a",
-			ID:        "first_handler",
-			Prio:     20,
+			ID:        "first_handler", // Unique identifier for this event handler (useful for logging & debugging)
+			Prio:     20, 				// Priority for event handler execution (highest first)
 			Func: func(ctx *evm.EventCtx) {
 				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
 
@@ -72,7 +72,7 @@ func main() {
 	ectx := evm.NewEventContext(expiry)
 
 	// Trigger an event
-	cnt, err := observer.Trigger("event_a", ectx)
+	cnt, err := observer.Trigger("event_a", ectx) // `Trigger(...)` sequentially executes all event handlers for `event_a` ordered by the event handlers priority
 	if err != nil {
 		log.Panic(err)
 	}
