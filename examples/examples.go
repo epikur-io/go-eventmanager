@@ -21,7 +21,7 @@ func main() {
 		{
 			EventName: "event_a",
 			ID:        "first_handler",
-			Order:     1,
+			Prio:      1,
 			Func: func(ctx *evm.EventCtx) {
 				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
 
@@ -32,7 +32,7 @@ func main() {
 		{
 			EventName: "event_a",
 			ID:        "second_handler",
-			Order:     2,
+			Prio:      2,
 			Func: func(ctx *evm.EventCtx) {
 				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
 
@@ -50,7 +50,7 @@ func main() {
 		{
 			EventName: "event_b",
 			ID:        "first_handler",
-			Order:     1,
+			Prio:      1,
 			Func: func(ctx *evm.EventCtx) {
 				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
 
@@ -63,7 +63,7 @@ func main() {
 		{
 			EventName: "event_a",
 			ID:        "third_handler",
-			Order:     3,
+			Prio:      3,
 			Func: func(ctx *evm.EventCtx) {
 				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
 				// this should not be executed

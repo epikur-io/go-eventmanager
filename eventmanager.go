@@ -104,7 +104,7 @@ func (ctx *EventCtx) addEventSource(e string, allowRecursion bool) error {
 // EventHandler defines a event handler thats listening on one specific event
 type EventHandler struct {
 	EventName string          `json:"name"` // EventName
-	Order     int             `json:"order"`
+	Prio      int             `json:"prio"`
 	Func      func(*EventCtx) `json:"-"`
 	ID        string          `json:"id"`
 }
@@ -121,8 +121,10 @@ func (s EventHandlerList) Len() int {
 func (s EventHandlerList) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
+
+// Sort by descending handler priority
 func (s EventHandlerList) Less(i, j int) bool {
-	return (s[i].Order) < (s[j].Order)
+	return (s[i].Prio) > (s[j].Prio)
 }
 
 type IObserver interface {
@@ -518,6 +520,7 @@ func (o *Observer) trigger(name string, ctx *EventCtx) (uint64, error) {
 		return ctx.iterations, ctx.err
 	}
 	el, ok := o.eventHandlers[name]
+	el.Sort()
 	if !ok || len(el) < 1 {
 		return ctx.iterations, ctx.err
 	}

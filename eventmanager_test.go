@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type Counter struct {
@@ -120,33 +122,39 @@ func TestRecursionNotAllowed(t *testing.T) {
 		}
 	}
 
+	callstack := []string{}
 	testVal := "value"
 	err := evm.AddHandlers([]EventHandler{
 		{
 			EventName: "event_a",
-			ID:        "id1",
-			Func:      func(ctx *EventCtx) {},
-			Order:     100,
-		},
-		{
-			EventName: "event_a",
 			ID:        "id2",
 			Func: func(ctx *EventCtx) {
+				callstack = append(callstack, "event_a.id2")
 				commonEventHandler(ctx)
 				ctx.Data["test"] = testVal
 				evm.TriggerCatch("event_b", ctx)
 			},
-			Order: 200,
+			Prio: 100,
+		},
+		{
+			EventName: "event_a",
+			ID:        "id1",
+			Func: func(ctx *EventCtx) {
+				callstack = append(callstack, "event_a.id1")
+				commonEventHandler(ctx)
+			},
+			Prio: 200,
 		},
 		{
 			EventName: "event_b",
 			ID:        "id1",
 			Func: func(ctx *EventCtx) {
+				callstack = append(callstack, "event_b.id1")
 				commonEventHandler(ctx)
 				ctx.Data["test"] = testVal + ".event_b"
 				evm.TriggerCatch("event_a", ctx)
 			},
-			Order: 200,
+			Prio: 200,
 		},
 	})
 	if err != nil {
@@ -165,10 +173,12 @@ func TestRecursionNotAllowed(t *testing.T) {
 		}
 
 		counter, _ := ectx.Data["counter"].(*Counter)
-		if int(cnt) != counter.Value+1 {
+		if int(cnt) != counter.Value {
 			t.Errorf("invalid number of event handler executions: %d != %d", cnt, counter.Value)
 		}
 	}
+	expectedCallstack := []string{"event_a.id1", "event_a.id2", "event_b.id1"}
+	assert.ElementsMatch(t, expectedCallstack, callstack)
 
 }
 func TestRecursionCallLimit(t *testing.T) {
@@ -185,7 +195,7 @@ func TestRecursionCallLimit(t *testing.T) {
 			Func: func(ctx *EventCtx) {
 				incr()
 			},
-			Order: 100,
+			Prio: 100,
 		},
 		{
 			EventName: "event_a",
@@ -194,7 +204,7 @@ func TestRecursionCallLimit(t *testing.T) {
 				incr()
 				evm.TriggerCatch("event_b", ctx)
 			},
-			Order: 200,
+			Prio: 200,
 		},
 		{
 			EventName: "event_b",
@@ -203,7 +213,7 @@ func TestRecursionCallLimit(t *testing.T) {
 				incr()
 				evm.TriggerCatch("event_a", ctx)
 			},
-			Order: 200,
+			Prio: 200,
 		},
 	})
 	if err != nil {
@@ -233,7 +243,7 @@ func TestContextTimeout(t *testing.T) {
 			Func: func(ctx *EventCtx) {
 				time.Sleep(time.Millisecond * 1100)
 			},
-			Order: 100,
+			Prio: 100,
 		},
 		{
 			EventName: "event_a",
@@ -248,7 +258,7 @@ func TestContextTimeout(t *testing.T) {
 					}
 				}
 			},
-			Order: 100,
+			Prio: 100,
 		},
 	})
 	if err != nil {
