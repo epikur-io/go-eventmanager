@@ -15,7 +15,7 @@ func main() {
 	observer := evm.NewObserver(evm.WithLogger(logger))
 
 	// Add multiple event handlers / hooks
-	// use "evmInstance.AddEventHandler(evm.EventHandler{..})" to add a  single event handle
+	// use "observer.AddEventHandler(evm.EventHandler{..})" to add a single event handle
 	err := observer.AddHandlers([]evm.EventHandler{
 		// Multiple handlers for the same event, handlers will be executed by their given order
 		{

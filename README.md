@@ -21,7 +21,7 @@ func main() {
 	observer := evm.NewObserver(evm.WithLogger(logger))
 
 	// Add multiple event handlers / hooks
-	// use "evmInstance.AddEventHandler(evm.EventHandler{..})" to add a  single event handle
+	// use "observer.AddEventHandler(evm.EventHandler{..})" to add a  single event handle
 	err := observer.AddHandlers([]evm.EventHandler{
 		// Multiple handlers for the same event, handlers will be executed by their given order
 		{
@@ -72,7 +72,7 @@ func main() {
 	ectx := evm.NewEventContext(expiry)
 
 	// Trigger an event
-	cnt, err := observer.Trigger("event_a", ectx) // `Trigger(...)` sequentially executes all event handlers for `event_a` ordered by the event handlers priority
+	cnt, err := observer.Trigger("event_a", ectx) // calling `Trigger(...)` sequentially executes all event handlers for `event_a` ordered ascending by the event handlers' priority. 
 	if err != nil {
 		log.Panic(err)
 	}
