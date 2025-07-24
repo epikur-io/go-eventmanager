@@ -124,7 +124,7 @@ func (s EventHandlerList) Swap(i, j int) {
 
 // Sort by descending handler priority
 func (s EventHandlerList) Less(i, j int) bool {
-	return (s[i].Prio) > (s[j].Prio)
+	return (s[i].Prio) < (s[j].Prio)
 }
 
 type IObserver interface {
