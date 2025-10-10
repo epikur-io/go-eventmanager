@@ -15,13 +15,13 @@ func main() {
 	observer := evm.NewObserver(evm.WithLogger(logger))
 
 	// Add multiple event handlers / hooks
-	// use "observer.AddEventHandler(evm.EventHandler{..})" to add a single event handle
+	// use "observer.AddEventHandler(evm.EventHandler{..})" to add a  single event handle
 	err := observer.AddHandlers([]evm.EventHandler{
 		// Multiple handlers for the same event, handlers will be executed by their given order
 		{
 			EventName: "event_a",
-			ID:        "first_handler",
-			Prio:      1,
+			ID:        "first_handler", // Unique identifier for this event handler (useful for logging & debugging)
+			Prio:      30,              // Priority for event handler execution (highest first)
 			Func: func(ctx *evm.EventCtx) {
 				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
 
@@ -32,7 +32,7 @@ func main() {
 		{
 			EventName: "event_a",
 			ID:        "second_handler",
-			Prio:      2,
+			Prio:      20,
 			Func: func(ctx *evm.EventCtx) {
 				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
 
@@ -42,28 +42,14 @@ func main() {
 					ctx.Data["datetime"] = datetime.Add(time.Hour * 24)
 				}
 
-				observer.Trigger("event_b", ctx)
 				// This will stop further execution of following event handlers
 				ctx.StopPropagation = true
 			},
 		},
 		{
-			EventName: "event_b",
-			ID:        "first_handler",
-			Prio:      1,
-			Func: func(ctx *evm.EventCtx) {
-				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
-
-				// This will stop the execution of
-				// subsequent event handlers and return an error, because
-				// we're still in the "event_a" chain and recursive triggering of events is not allowed
-				// observer.Trigger("event_a", ctx)
-			},
-		},
-		{
 			EventName: "event_a",
 			ID:        "third_handler",
-			Prio:      3,
+			Prio:      10,
 			Func: func(ctx *evm.EventCtx) {
 				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
 				// this should not be executed
@@ -80,7 +66,7 @@ func main() {
 	ectx := evm.NewEventContext(expiry)
 
 	// Trigger an event
-	cnt, err := observer.Trigger("event_a", ectx)
+	cnt, err := observer.Trigger("event_a", ectx) // calling `Trigger(...)` sequentially executes all event handlers for `event_a` ordered ascending by the event handlers' priority.
 	if err != nil {
 		log.Panic(err)
 	}

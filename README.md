@@ -27,7 +27,7 @@ func main() {
 		{
 			EventName: "event_a",
 			ID:        "first_handler", // Unique identifier for this event handler (useful for logging & debugging)
-			Prio:     20, 				// Priority for event handler execution (highest first)
+			Prio:      30,              // Priority for event handler execution (highest first)
 			Func: func(ctx *evm.EventCtx) {
 				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
 
@@ -38,7 +38,7 @@ func main() {
 		{
 			EventName: "event_a",
 			ID:        "second_handler",
-			Prio:     10,
+			Prio:      20,
 			Func: func(ctx *evm.EventCtx) {
 				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
 
@@ -55,7 +55,7 @@ func main() {
 		{
 			EventName: "event_a",
 			ID:        "third_handler",
-			Prio:     11,
+			Prio:      10,
 			Func: func(ctx *evm.EventCtx) {
 				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
 				// this should not be executed
@@ -72,11 +72,12 @@ func main() {
 	ectx := evm.NewEventContext(expiry)
 
 	// Trigger an event
-	cnt, err := observer.Trigger("event_a", ectx) // calling `Trigger(...)` sequentially executes all event handlers for `event_a` ordered ascending by the event handlers' priority. 
+	cnt, err := observer.Trigger("event_a", ectx) // calling `Trigger(...)` sequentially executes all event handlers for `event_a` ordered ascending by the event handlers' priority.
 	if err != nil {
 		log.Panic(err)
 	}
 	log.Printf("Executed %d handlers\n", cnt)
 	log.Printf("Datetime:  %v\n", ectx.Data["datetime"])
 }
+
 ```
