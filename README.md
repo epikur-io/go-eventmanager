@@ -31,6 +31,50 @@ func main() {
 			Func: func(ctx *evm.EventCtx) {
 				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
 
+				// add some custom data to the contextpackage main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+	"time"
+
+	evm "github.com/epikur-io/go-eventmanager"
+	"github.com/rs/zerolog"
+)
+
+func main() {
+	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
+	observer := evm.NewObserver(
+		evm.WithLogger(logger),
+		evm.WithBeforeCallback(func(ctx *evm.EventCtx) error {
+			// This callback runs before any event handler chain gets executed.
+			// This could be used to inject context information based on the given event `ctx.EventName`
+			// or other parameters.
+			ctx.Data.Set("Hello", "World")
+			return nil
+		}),
+		evm.WithAfterCallback(func(ctx *evm.EventCtx) {
+			// This callback runs after the event handler chain was executed.
+			// This can be used to cleanup things to trigger further program logic.
+			if v := ctx.Data.Get("datetime"); v != nil {
+				fmt.Println("(AfterCallback) Datetime:", v.(time.Time).String())
+			}
+		}),
+	)
+
+	// Add multiple event handlers / hooks
+	// use "observer.AddEventHandler(evm.EventHandler{..})" to add a  single event handle
+	err := observer.AddHandlers([]evm.EventHandler{
+		// Multiple handlers for the same event, handlers will be executed by their given order
+		{
+			EventName: "event_a",
+			ID:        "first_handler", // Unique identifier for this event handler (useful for logging & debugging)
+			Prio:      30,              // Priority for event handler execution (highest first)
+			Func: func(ctx *evm.EventCtx) {
+				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
+
 				// add some custom data to the context
 				ctx.Data["datetime"] = time.Now()
 			},
@@ -57,8 +101,8 @@ func main() {
 			ID:        "third_handler",
 			Prio:      10,
 			Func: func(ctx *evm.EventCtx) {
+				// this should not be executed because `ctx.StopPropagation` was set to true.
 				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
-				// this should not be executed
 			},
 		},
 	})
@@ -79,5 +123,4 @@ func main() {
 	log.Printf("Executed %d handlers\n", cnt)
 	log.Printf("Datetime:  %v\n", ectx.Data["datetime"])
 }
-
 ```

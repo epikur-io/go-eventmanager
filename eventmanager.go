@@ -58,6 +58,10 @@ func (ed EventData) Set(key string, val any) {
 	ed[key] = val
 }
 
+type beforeCallback func(ctx *EventCtx) error
+
+type afterCallback func(ctx *EventCtx)
+
 // EventCtx stores internal information
 type EventCtx struct {
 	// Name of the triggered event
@@ -115,9 +119,11 @@ type EventHandlerList []*EventHandler
 func (s EventHandlerList) Sort() {
 	sort.Sort(s)
 }
+
 func (s EventHandlerList) Len() int {
 	return len(s)
 }
+
 func (s EventHandlerList) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
@@ -154,6 +160,8 @@ type config struct {
 	callstackLimit int  // The max number of callback per event
 	allowRecursion bool // disabled by default
 	hasLog         bool
+	beforeCallback beforeCallback
+	afterCallback  afterCallback
 }
 
 type option func(*config)
@@ -174,6 +182,18 @@ func WithCallstackLimit(l int) option {
 func WithRecursionAllowed() option {
 	return func(c *config) {
 		c.allowRecursion = true
+	}
+}
+
+func WithBeforeCallback(f beforeCallback) option {
+	return func(c *config) {
+		c.beforeCallback = f
+	}
+}
+
+func WithAfterCallback(f afterCallback) option {
+	return func(c *config) {
+		c.afterCallback = f
 	}
 }
 
@@ -533,6 +553,16 @@ func (o *Observer) trigger(name string, ctx *EventCtx) (uint64, error) {
 		ctx.err = err
 		return ctx.iterations, ctx.err
 	}
+	if o.config.beforeCallback != nil {
+		if err := o.config.beforeCallback(ctx); err != nil {
+			return ctx.iterations, err
+		}
+	}
+	defer func() {
+		if o.config.afterCallback != nil {
+			o.config.afterCallback(ctx)
+		}
+	}()
 	for _, e := range el {
 		if ctx.GoContext != nil {
 			select {

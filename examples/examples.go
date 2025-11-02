@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -12,7 +13,23 @@ import (
 
 func main() {
 	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
-	observer := evm.NewObserver(evm.WithLogger(logger))
+	observer := evm.NewObserver(
+		evm.WithLogger(logger),
+		evm.WithBeforeCallback(func(ctx *evm.EventCtx) error {
+			// This callback runs before any event handler chain gets executed.
+			// This could be used to inject context information based on the given event `ctx.EventName`
+			// or other parameters.
+			ctx.Data.Set("Hello", "World")
+			return nil
+		}),
+		evm.WithAfterCallback(func(ctx *evm.EventCtx) {
+			// This callback runs after the event handler chain was executed.
+			// This can be used to cleanup things to trigger further program logic.
+			if v := ctx.Data.Get("datetime"); v != nil {
+				fmt.Println("(AfterCallback) Datetime:", v.(time.Time).String())
+			}
+		}),
+	)
 
 	// Add multiple event handlers / hooks
 	// use "observer.AddEventHandler(evm.EventHandler{..})" to add a  single event handle
@@ -51,8 +68,8 @@ func main() {
 			ID:        "third_handler",
 			Prio:      10,
 			Func: func(ctx *evm.EventCtx) {
+				// this should not be executed because `ctx.StopPropagation` was set to true.
 				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
-				// this should not be executed
 			},
 		},
 	})
