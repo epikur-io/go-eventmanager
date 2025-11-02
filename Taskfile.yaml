@@ -31,7 +31,7 @@ tasks:
     dir: '{{.TASKFILE_DIR}}'
     cmds:
       - golangci-lint run ./...
-    
+
   # installing development & ci dependencies
   install:deps:
     dir: '{{.TASKFILE_DIR}}'
