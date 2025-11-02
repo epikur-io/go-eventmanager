@@ -23,6 +23,9 @@ import (
 // the context stores a call-chain. If a event name occurs more than once
 // a "recursion not allowed" error is returned.
 
+// !TODO: add `WithRecover(func(ctx *EventCtx, panicValue))` option to allow to recover from a panic thrown inside
+// an event handler and log the error insetad.
+
 const (
 	DefaultCallstackLimit = uint64(510) // 2 * 255
 )

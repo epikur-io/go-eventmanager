@@ -1,7 +1,67 @@
 # A thread-safe event manager for Go
 
-## Example:
+`go-eventmanager` provides a **robust, thread-safe implementation of the Observer pattern** for Go.
+It lets you define events, attach multiple prioritized handlers, and trigger them safely and efficiently across goroutines.
 
+## Features
+
+- **Thread-safe** event registration and triggering
+- **Priority-based** handler execution (ascending or descending)
+- **Before/After callbacks** for custom logic injection
+- **Context propagation** and safe data sharing
+- **StopPropagation** support to halt handler chains
+- **Flexible logging** integration (via zerolog)
+- **Lightweight, composable API**
+
+### Thread Safety
+
+- The observer uses internal synchronization (mutexes) to ensure:
+- Safe concurrent registration/removal of handlers
+- Correct ordering and consistent event triggering
+- No race conditions when modifying shared context data
+
+## Core Concepts
+
+### Observer
+
+The Observer is the main event manager. It maintains:
+
+- A registry of event handlers grouped by event name
+- Optional before/after hooks
+- Thread-safe synchronization
+
+### EventHandler
+
+An EventHandler defines how to handle a specific event.
+It contains:
+
+```go
+type EventHandler struct {
+    EventName string
+    ID        string
+    Prio      int
+    Func      func(ctx *EventCtx)
+}
+```
+
+Handlers for the same event are executed based on their priority.
+Use ExecDescending (default) or ExecAscending to control the order.
+
+> **Note:** The uniqueness of the `EventHandler.ID` is not enforced. Its primary use is to help debugging and understand the event logs better.
+
+### EventCtx
+
+EventCtx carries:
+
+- The context.Context for cancellation/timeouts
+- The EventName and HandlerID
+- A Data map for sharing information between handlers
+- A StopPropagation flag to halt execution mid-chain
+
+
+## Quick Start Example
+
+A basic example can be found [here](./examples/basic/basic.go).
 
 ```go
 package main
@@ -99,4 +159,51 @@ func main() {
 	log.Printf("Executed %d handlers\n", cnt)
 	log.Printf("Datetime:  %v\n", ectx.Data["datetime"])
 }
+```
+
+## Advanced Usage
+
+### Adding Handlers Individually
+
+```go
+observer.AddEventHandler(evm.EventHandler{
+	EventName: "user_signup",
+	ID:        "send_welcome_email",
+	Prio:      50,
+	Func: func(ctx *evm.EventCtx) {
+		fmt.Println("Sending welcome email...")
+	},
+})
+```
+
+### Removing Handlers
+
+```go
+err := observer.RemoveHandler("user_signup", "send_welcome_email")
+if err != nil {
+	log.Println("Handler removal failed:", err)
+}
+```
+
+### Triggering Events Concurrently
+
+```go
+go observer.Trigger("event_a", evm.NewEventContext(context.Background()))
+```
+
+### Custom Execution Order
+
+```go
+observer := evm.NewObserver(
+	evm.WithExecutionOrder(evm.ExecAscending),
+)
+```
+
+### Using Before and After Callbacks
+
+```go
+evm.WithBeforeCallback(func(ctx *evm.EventCtx) error {
+	ctx.Data["timestamp"] = time.Now()
+	return nil
+})
 ```
