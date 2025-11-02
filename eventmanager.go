@@ -33,6 +33,24 @@ var (
 	ErrMissingEventCtx       = errors.New("missing event context")
 )
 
+type SortOrder int
+
+const (
+	ExecAscending SortOrder = iota
+	ExecDescending
+)
+
+func (so SortOrder) String() string {
+	switch so {
+	case ExecAscending:
+		return "ASC"
+	case ExecDescending:
+		return "DESC"
+	default:
+		return "UNKNOWN"
+	}
+}
+
 type CallStack []string
 
 func (c CallStack) Contains(callerID string) bool {
@@ -124,8 +142,13 @@ type EventHandler struct {
 // EventHandlerList is a list of event handlers that provides a sorting interface
 type EventHandlerList []*EventHandler
 
-func (s EventHandlerList) Sort() {
-	sort.Sort(s)
+// SortAscending sorts the list in ascending order (lowest priority first)
+func (s EventHandlerList) Sort(order SortOrder) {
+	if order == ExecDescending {
+		sort.Sort(s)
+	} else {
+		sort.Sort(ascendingEventHandlerList(s))
+	}
 }
 
 func (s EventHandlerList) Len() int {
@@ -139,6 +162,21 @@ func (s EventHandlerList) Swap(i, j int) {
 // Sort by descending handler priority
 func (s EventHandlerList) Less(i, j int) bool {
 	return (s[i].Prio) > (s[j].Prio)
+}
+
+type ascendingEventHandlerList EventHandlerList
+
+func (s ascendingEventHandlerList) Len() int {
+	return len(s)
+}
+
+func (s ascendingEventHandlerList) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+// Less implements sorting in ascending order (lowest priority first)
+func (s ascendingEventHandlerList) Less(i, j int) bool {
+	return s[i].Prio < s[j].Prio
 }
 
 type IObserver interface {
@@ -170,6 +208,7 @@ type config struct {
 	hasLog         bool
 	beforeCallback beforeCallback
 	afterCallback  afterCallback
+	executionOrder SortOrder
 }
 
 type option func(*config)
@@ -205,6 +244,12 @@ func WithAfterCallback(f afterCallback) option {
 	}
 }
 
+func WithExecutionOrder(order SortOrder) option {
+	return func(c *config) {
+		c.executionOrder = order
+	}
+}
+
 // Observer manages the event/event chains
 type Observer struct {
 	eventHandlers map[string]EventHandlerList // Event handler map
@@ -214,7 +259,9 @@ type Observer struct {
 
 func NewObserver(opts ...option) *Observer {
 	o := &Observer{
-		config: config{},
+		config: config{
+			executionOrder: ExecDescending,
+		},
 	}
 
 	for _, opt := range opts {
@@ -311,7 +358,7 @@ func (o *Observer) deleteByEventAndID(ei string, id string) {
 			deleted++
 		}
 	}
-	o.eventHandlers[ei].Sort()
+	o.eventHandlers[ei].Sort(o.config.executionOrder)
 }
 
 // Deletes all event handlers with the given ID ignoring the event name
@@ -340,7 +387,7 @@ func (o *Observer) deleteByID(id string) uint64 {
 			}
 		}
 		total += deleted
-		o.eventHandlers[ei].Sort()
+		o.eventHandlers[ei].Sort(o.config.executionOrder)
 	}
 	return uint64(total)
 }
@@ -366,7 +413,7 @@ func (o *Observer) DeleteByIDPrefix(prefix string) uint64 {
 			}
 		}
 		total += deleted
-		o.eventHandlers[ei].Sort()
+		o.eventHandlers[ei].Sort(o.config.executionOrder)
 	}
 	o.mux.Unlock()
 	return uint64(total)
@@ -491,10 +538,10 @@ func (o *Observer) addHandler(e *EventHandler, opt ...bool) error {
 			}
 		}
 		o.eventHandlers[e.EventName] = append(o.eventHandlers[e.EventName], e)
-		o.eventHandlers[e.EventName].Sort()
+		o.eventHandlers[e.EventName].Sort(o.config.executionOrder)
 	} else {
 		o.eventHandlers[e.EventName] = append(o.eventHandlers[e.EventName], e)
-		o.eventHandlers[e.EventName].Sort()
+		o.eventHandlers[e.EventName].Sort(o.config.executionOrder)
 	}
 	return nil
 }
@@ -548,14 +595,14 @@ func (o *Observer) trigger(name string, ctx *EventCtx) (uint64, error) {
 		return ctx.iterations, ctx.err
 	}
 	el, ok := o.eventHandlers[name]
-	el.Sort()
+	el.Sort(o.config.executionOrder)
 	if !ok || len(el) < 1 {
 		return ctx.iterations, ctx.err
 	}
 	currentEventName := name
-	// if ctx.EventName == "" {
-	// 	ctx.EventName = sourceEventName
-	// }
+	if ctx.EventName() == "" {
+		ctx.eventName = name
+	}
 	if err := ctx.addEventSource(currentEventName, o.config.allowRecursion); err != nil {
 		// also checks for recursion and stops if not allowed
 		ctx.err = err

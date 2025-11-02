@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// !TODO: add tests for checking execution order option
+
 type Counter struct {
 	Value int
 }
@@ -278,4 +280,52 @@ func TestContextTimeout(t *testing.T) {
 		t.Errorf("expected exactly one event handler to be executed but got %d executions", len(ectx.callStack))
 	}
 
+}
+
+func TestReverseExecutionOrder(t *testing.T) {
+	execList := []string{}
+	evm := NewObserver(WithExecutionOrder(ExecAscending))
+	err := evm.AddHandlers([]EventHandler{
+		{
+			EventName: "event_a",
+			ID:        "id1",
+			Prio:      50,
+			Func: func(ctx *EventCtx) {
+				execList = append(execList, ctx.HandlerID())
+			},
+		},
+		{
+			EventName: "event_a",
+			ID:        "id2",
+			Prio:      10,
+			Func: func(ctx *EventCtx) {
+				execList = append(execList, ctx.HandlerID())
+			},
+		},
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	gctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
+	defer cancel()
+	ectx := NewEventContext(gctx)
+
+	if _, err := evm.Trigger("event_a", ectx); err != nil {
+		t.Error(err)
+	}
+
+	if len(execList) < 2 {
+		t.Error("empty result list, no event handler executed")
+	}
+
+	firstEvent := "id2"
+	if execList[0] != firstEvent {
+		t.Errorf("invalid reverse order, got \"%s\", want \"%s\"", execList[0], firstEvent)
+	}
+
+	secondEvent := "id1"
+	if execList[1] != secondEvent {
+		t.Errorf("invalid reverse order, got \"%s\", want \"%s\"", execList[1], secondEvent)
+	}
 }

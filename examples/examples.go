@@ -14,6 +14,9 @@ import (
 func main() {
 	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
 	observer := evm.NewObserver(
+		// default execution order is descending, highest prio first,
+		// use `evm.ExecAscending` for reverse order.
+		evm.WithExecutionOrder(evm.ExecDescending),
 		evm.WithLogger(logger),
 		evm.WithBeforeCallback(func(ctx *evm.EventCtx) error {
 			// This callback runs before any event handler chain gets executed.
