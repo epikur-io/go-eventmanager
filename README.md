@@ -83,6 +83,9 @@ func main() {
 		// default execution order is descending, highest prio first,
 		// use `evm.ExecAscending` for reverse order.
 		evm.WithExecutionOrder(evm.ExecDescending),
+		evm.WithPanicRecover(func(ctx *evm.EventCtx, panicValue any) {
+			log.Printf("recovered from panic caused by: %s (ID: %s), panic value: %v\n", ctx.EventName(), ctx.HandlerID(), panicValue)
+		}),
 		evm.WithLogger(logger),
 		evm.WithBeforeCallback(func(ctx *evm.EventCtx) error {
 			// This callback runs before any event handler chain gets executed.

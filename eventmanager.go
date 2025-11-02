@@ -23,9 +23,6 @@ import (
 // the context stores a call-chain. If a event name occurs more than once
 // a "recursion not allowed" error is returned.
 
-// !TODO: add `WithRecover(func(ctx *EventCtx, panicValue))` option to allow to recover from a panic thrown inside
-// an event handler and log the error insetad.
-
 const (
 	DefaultCallstackLimit = uint64(510) // 2 * 255
 )
@@ -82,6 +79,8 @@ func (ed EventData) Set(key string, val any) {
 type beforeCallback func(ctx *EventCtx) error
 
 type afterCallback func(ctx *EventCtx)
+
+type panicRecoverCallback = func(ctx *EventCtx, panicValue any)
 
 // EventCtx stores internal information
 type EventCtx struct {
@@ -205,13 +204,14 @@ type IObserver interface {
 var _ IObserver = &Observer{}
 
 type config struct {
-	logger         zerolog.Logger
-	callstackLimit int  // The max number of callback per event
-	allowRecursion bool // disabled by default
-	hasLog         bool
-	beforeCallback beforeCallback
-	afterCallback  afterCallback
-	executionOrder SortOrder
+	logger               zerolog.Logger
+	callstackLimit       int  // The max number of callback per event
+	allowRecursion       bool // disabled by default
+	hasLog               bool
+	panicRecoverCallback panicRecoverCallback
+	beforeCallback       beforeCallback
+	afterCallback        afterCallback
+	executionOrder       SortOrder
 }
 
 type option func(*config)
@@ -220,6 +220,12 @@ func WithLogger(l zerolog.Logger) option {
 	return func(c *config) {
 		c.logger = l
 		c.hasLog = true
+	}
+}
+
+func WithPanicRecover(fn panicRecoverCallback) option {
+	return func(c *config) {
+		c.panicRecoverCallback = fn
 	}
 }
 
@@ -617,6 +623,18 @@ func (o *Observer) trigger(name string, ctx *EventCtx) (uint64, error) {
 		}
 	}
 	defer func() {
+		if o.config.panicRecoverCallback != nil {
+			if r := recover(); r != nil {
+				if o.config.hasLog {
+					o.config.logger.Error().
+						Str("event", ctx.eventName).
+						Str("handler_id", ctx.handlerID).
+						Any("panic_value", r).
+						Msg("recoverd from panic.")
+				}
+				o.config.panicRecoverCallback(ctx, r)
+			}
+		}
 		if o.config.afterCallback != nil {
 			o.config.afterCallback(ctx)
 		}

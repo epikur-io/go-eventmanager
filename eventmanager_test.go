@@ -329,3 +329,45 @@ func TestReverseExecutionOrder(t *testing.T) {
 		t.Errorf("invalid reverse order, got \"%s\", want \"%s\"", execList[1], secondEvent)
 	}
 }
+
+func TestPanicRecover(t *testing.T) {
+	execList := []any{}
+	callback := func(ctx *EventCtx, r any) {
+		execList = append(execList, r)
+		expected := any(42)
+		if r != expected {
+			t.Errorf("invalid value, got \"%s\", want \"%s\"", r, expected)
+		}
+	}
+	evm := NewObserver(WithPanicRecover(callback))
+	err := evm.AddHandlers([]EventHandler{
+		{
+			EventName: "event_a",
+			ID:        "id1",
+			Prio:      50,
+			Func: func(ctx *EventCtx) {
+				panic(any(42))
+			},
+		},
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	gctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
+	defer cancel()
+	ectx := NewEventContext(gctx)
+
+	if _, err := evm.Trigger("event_a", ectx); err != nil {
+		t.Error(err)
+	}
+
+	if len(execList) < 1 {
+		t.Error("empty result list, no recover handler executed")
+	}
+
+	first := any(42)
+	if execList[0] != first {
+		t.Errorf("invalid value, got \"%s\", want \"%s\"", execList[0], first)
+	}
+}
