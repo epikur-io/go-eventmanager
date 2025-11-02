@@ -92,7 +92,7 @@ func main() {
 	ectx := evm.NewEventContext(expiry)
 
 	// Trigger an event
-	cnt, err := observer.Trigger("event_a", ectx) // calling `Trigger(...)` sequentially executes all event handlers for `event_a` ordered ascending by the event handlers' priority.
+	cnt, err := observer.Trigger("event_a", ectx) // calling `Trigger(...)` sequentially executes all event handlers for `event_a` ordered descending by the event handlers' priority.
 	if err != nil {
 		log.Panic(err)
 	}
