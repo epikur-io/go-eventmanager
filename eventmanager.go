@@ -65,9 +65,9 @@ type afterCallback func(ctx *EventCtx)
 // EventCtx stores internal information
 type EventCtx struct {
 	// Name of the triggered event
-	EventName string
+	eventName string
 	// HandlerID of the current handler that gets executed
-	HandlerID       string
+	handlerID       string
 	GoContext       context.Context
 	iterations      uint64
 	callStack       CallStack
@@ -84,6 +84,14 @@ func NewEventContext(goCtx context.Context) *EventCtx {
 	ctx.eventSourceMap = make(map[string]uint64)
 	ctx.Data = make(map[string]interface{})
 	return ctx
+}
+
+func (ctx *EventCtx) EventName() string {
+	return ctx.eventName
+}
+
+func (ctx *EventCtx) HandlerID() string {
+	return ctx.handlerID
 }
 
 func (ctx *EventCtx) pushCallStack(e string) {
@@ -595,12 +603,12 @@ func (o *Observer) trigger(name string, ctx *EventCtx) (uint64, error) {
 				Msg("executing event handler")
 		}
 		ctx.pushCallStack(handlerID)
-		ctx.HandlerID = e.ID
-		sourceEventName := ctx.EventName
-		ctx.EventName = currentEventName
+		ctx.handlerID = e.ID
+		sourceEventName := ctx.eventName
+		ctx.eventName = currentEventName
 		e.Func(ctx)
 		if sourceEventName != "" {
-			ctx.EventName = sourceEventName
+			ctx.eventName = sourceEventName
 		}
 		ctx.iterations += 1
 	}

@@ -23,7 +23,7 @@ func main() {
 		evm.WithLogger(logger),
 		evm.WithBeforeCallback(func(ctx *evm.EventCtx) error {
 			// This callback runs before any event handler chain gets executed.
-			// This could be used to inject context information based on the given event `ctx.EventName`
+			// This could be used to inject context information based on the given event `ctx.EventName()`
 			// or other parameters.
 			ctx.Data.Set("Hello", "World")
 			return nil
@@ -46,7 +46,7 @@ func main() {
 			ID:        "first_handler", // Unique identifier for this event handler (useful for logging & debugging)
 			Prio:      30,              // Priority for event handler execution (highest first)
 			Func: func(ctx *evm.EventCtx) {
-				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
+				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName(), ctx.HandlerID())
 
 				// add some custom data to the context
 				ctx.Data["datetime"] = time.Now()
@@ -57,7 +57,7 @@ func main() {
 			ID:        "second_handler",
 			Prio:      20,
 			Func: func(ctx *evm.EventCtx) {
-				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
+				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName(), ctx.HandlerID())
 
 				// do some additional work on the data provided by the previous handler
 				datetime, ok := ctx.Data["datetime"].(time.Time)
@@ -75,7 +75,7 @@ func main() {
 			Prio:      10,
 			Func: func(ctx *evm.EventCtx) {
 				// this should not be executed because `ctx.StopPropagation` was set to true.
-				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
+				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName(), ctx.HandlerID())
 			},
 		},
 	})
