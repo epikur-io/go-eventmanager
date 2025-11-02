@@ -8,33 +8,6 @@ package main
 
 import (
 	"context"
-	"log"
-	"os"
-	"time"
-
-	evm "github.com/epikur-io/go-eventmanager"
-	"github.com/rs/zerolog"
-)
-
-func main() {
-	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
-	observer := evm.NewObserver(evm.WithLogger(logger))
-
-	// Add multiple event handlers / hooks
-	// use "observer.AddEventHandler(evm.EventHandler{..})" to add a  single event handle
-	err := observer.AddHandlers([]evm.EventHandler{
-		// Multiple handlers for the same event, handlers will be executed by their given order
-		{
-			EventName: "event_a",
-			ID:        "first_handler", // Unique identifier for this event handler (useful for logging & debugging)
-			Prio:      30,              // Priority for event handler execution (highest first)
-			Func: func(ctx *evm.EventCtx) {
-				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName, ctx.HandlerID)
-
-				// add some custom data to the contextpackage main
-
-import (
-	"context"
 	"fmt"
 	"log"
 	"os"
