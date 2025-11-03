@@ -1,4 +1,4 @@
-package eventmanager
+package eventor
 
 import (
 	"context"

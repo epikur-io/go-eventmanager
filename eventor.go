@@ -1,4 +1,4 @@
-package eventmanager
+package eventor
 
 // up-to-date package with working recursion detection (2025-02-24)
 

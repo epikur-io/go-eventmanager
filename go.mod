@@ -1,4 +1,4 @@
-module github.com/epikur-io/go-eventmanager
+module github.com/epikur-io/go-eventor
 
 go 1.22.3
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	evm "github.com/epikur-io/go-eventmanager"
+	"github.com/epikur-io/go-eventor"
 )
 
 type User struct {
@@ -15,21 +15,21 @@ type User struct {
 
 func main() {
 	// Create a new observer with default options
-	observer := evm.NewObserver()
+	observer := eventor.NewObserver()
 
 	// Add event handlers
-	observer.AddEventHandler(evm.EventHandler{
+	observer.AddEventHandler(eventor.EventHandler{
 		EventName: "user.created",
 		ID:        "send_welcome_email",
 		Prio:      50,
-		Func: func(ctx *evm.EventCtx) {
+		Func: func(ctx *eventor.EventCtx) {
 			user := ctx.Data.Get("user").(*User)
 			log.Printf("Sending welcome email to: %s", user.Email)
 		},
 	})
 
 	// Trigger event
-	ectx := evm.NewEventContext(context.Background())
+	ectx := eventor.NewEventContext(context.Background())
 	ectx.Data.Set("user", &User{ID: 1, Name: "user", Email: "user@example.com"})
 
 	count, err := observer.Trigger("user.created", ectx)

@@ -1,6 +1,6 @@
 # A thread-safe event manager for Go
 
-`go-eventmanager` provides a **robust, thread-safe implementation of the Observer pattern** for Go.
+`go-eventor` provides a **robust, thread-safe implementation of the Observer pattern** for Go.
 It lets you define events, attach multiple prioritized handlers, and trigger them safely and efficiently across goroutines.
 
 ## Features
@@ -70,28 +70,28 @@ import (
 	"os"
 	"time"
 
-	evm "github.com/epikur-io/go-eventmanager"
+	"github.com/epikur-io/go-eventor"
 	"github.com/rs/zerolog"
 )
 
 func main() {
 	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
-	observer := evm.NewObserver(
+	observer := eventor.NewObserver(
 		// default execution order is descending, highest prio first,
 		// use `evm.ExecAscending` for reverse order.
-		evm.WithExecutionOrder(evm.ExecDescending),
-		evm.WithPanicRecover(func(ctx *evm.EventCtx, panicValue any) {
+		eventor.WithExecutionOrder(eventor.ExecDescending),
+		eventor.WithPanicRecover(func(ctx *eventor.EventCtx, panicValue any) {
 			log.Printf("recovered from panic caused by: %s (ID: %s), panic value: %v\n", ctx.EventName(), ctx.HandlerID(), panicValue)
 		}),
-		evm.WithLogger(logger),
-		evm.WithBeforeCallback(func(ctx *evm.EventCtx) error {
+		eventor.WithLogger(logger),
+		eventor.WithBeforeCallback(func(ctx *eventor.EventCtx) error {
 			// This callback runs before any event handler chain gets executed.
 			// This could be used to inject context information based on the given event `ctx.EventName()`
 			// or other parameters.
 			ctx.Data.Set("Hello", "World")
 			return nil
 		}),
-		evm.WithAfterCallback(func(ctx *evm.EventCtx) {
+		eventor.WithAfterCallback(func(ctx *eventor.EventCtx) {
 			// This callback runs after the event handler chain was executed.
 			// This can be used to cleanup things to trigger further program logic.
 			if v := ctx.Data.Get("datetime"); v != nil {
@@ -102,13 +102,13 @@ func main() {
 
 	// Add multiple event handlers / hooks
 	// use "observer.AddEventHandler(evm.EventHandler{..})" to add a  single event handle
-	err := observer.AddHandlers([]evm.EventHandler{
+	err := observer.AddHandlers([]eventor.EventHandler{
 		// Multiple handlers for the same event, handlers will be executed by their given order
 		{
 			EventName: "event_a",
 			ID:        "first_handler", // Unique identifier for this event handler (useful for logging & debugging)
 			Prio:      30,              // Priority for event handler execution (highest first)
-			Func: func(ctx *evm.EventCtx) {
+			Func: func(ctx *eventor.EventCtx) {
 				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName(), ctx.HandlerID())
 
 				// add some custom data to the context
@@ -119,7 +119,7 @@ func main() {
 			EventName: "event_a",
 			ID:        "second_handler",
 			Prio:      20,
-			Func: func(ctx *evm.EventCtx) {
+			Func: func(ctx *eventor.EventCtx) {
 				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName(), ctx.HandlerID())
 
 				// do some additional work on the data provided by the previous handler
@@ -136,7 +136,7 @@ func main() {
 			EventName: "event_a",
 			ID:        "third_handler",
 			Prio:      10,
-			Func: func(ctx *evm.EventCtx) {
+			Func: func(ctx *eventor.EventCtx) {
 				// this should not be executed because `ctx.StopPropagation` was set to true.
 				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName(), ctx.HandlerID())
 			},
@@ -149,7 +149,7 @@ func main() {
 	// context with 1 second timeout
 	expiry, cancel := context.WithTimeout(context.Background(), time.Second*1)
 	defer cancel()
-	ectx := evm.NewEventContext(expiry)
+	ectx := eventor.NewEventContext(expiry)
 
 	// Trigger an event
 	cnt, err := observer.Trigger("event_a", ectx) // calling `Trigger(...)` sequentially executes all event handlers for `event_a` ordered descending by the event handlers' priority.
