@@ -50,10 +50,22 @@ Use ExecDescending (default) or ExecAscending to control the order.
 
 EventCtx carries:
 
-- The context.Context for cancellation/timeouts
-- The EventName and HandlerID
+```go
+type EventCtx struct {
+	GoContext       context.Context
+	StopPropagation bool
+	Data            EventData
+}
+func (ctx *EventCtx) EventName() string
+func (ctx *EventCtx) HandlerID() string
+func (ctx *EventCtx) Err() error
+```
+
+- The context.Context (`ctx.GoContext`) for cancellation/timeouts
+- The EventName and HandlerID (`ctx.EventName()` & `ctx.HandlerID()`)
 - A Data map for sharing information between handlers
 - A StopPropagation flag to halt execution mid-chain
+- Potetial errors (`ctx.Err()`)
 
 
 ## Quick Start Example
