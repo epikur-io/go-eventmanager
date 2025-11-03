@@ -8,8 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// !TODO: add tests for checking execution order option
-
 type Counter struct {
 	Value int
 }
