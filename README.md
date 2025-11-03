@@ -6,19 +6,16 @@ It lets you define events, attach multiple prioritized handlers, and trigger the
 ## Features
 
 - **Thread-safe** event registration and triggering
+  - The observer uses internal synchronization (mutexes) to ensure:
+  - Safe concurrent registration/removal of handlers
+  - Correct ordering and consistent event triggering
+  - No race conditions when modifying shared context data
 - **Priority-based** handler execution (ascending or descending)
 - **Before/After callbacks** for custom logic injection
 - **Context propagation** and safe data sharing
 - **StopPropagation** support to halt handler chains
 - **Flexible logging** integration (via zerolog)
 - **Lightweight, composable API**
-
-### Thread Safety
-
-- The observer uses internal synchronization (mutexes) to ensure:
-- Safe concurrent registration/removal of handlers
-- Correct ordering and consistent event triggering
-- No race conditions when modifying shared context data
 
 ## Core Concepts
 
