@@ -16,19 +16,19 @@ func TestEnforceIDUniqueness(t *testing.T) {
 	evm := NewObserver()
 	err := evm.AddHandlers([]EventHandler{
 		{
-			EventName: "event_b",
-			ID:        "id1",
-			Func:      func(ctx *EventCtx) {},
+			Name: "event_b",
+			ID:   "id1",
+			Func: func(ctx *EventCtx) {},
 		},
 		{
-			EventName: "event_b",
-			ID:        "id1",
-			Func:      func(ctx *EventCtx) {},
+			Name: "event_b",
+			ID:   "id1",
+			Func: func(ctx *EventCtx) {},
 		},
 		{
-			EventName: "event_b",
-			ID:        "id",
-			Func:      func(ctx *EventCtx) {},
+			Name: "event_b",
+			ID:   "id",
+			Func: func(ctx *EventCtx) {},
 		},
 	}, true, true)
 	if err == nil {
@@ -43,19 +43,19 @@ func TestCountByEventAndID(t *testing.T) {
 	evm := NewObserver()
 	err := evm.AddHandlers([]EventHandler{
 		{
-			EventName: "event_a",
-			ID:        "id1",
-			Func:      func(ctx *EventCtx) {},
+			Name: "event_a",
+			ID:   "id1",
+			Func: func(ctx *EventCtx) {},
 		},
 		{
-			EventName: "event_b",
-			ID:        "id1",
-			Func:      func(ctx *EventCtx) {},
+			Name: "event_b",
+			ID:   "id1",
+			Func: func(ctx *EventCtx) {},
 		},
 		{
-			EventName: "event_b",
-			ID:        "id1",
-			Func:      func(ctx *EventCtx) {},
+			Name: "event_b",
+			ID:   "id1",
+			Func: func(ctx *EventCtx) {},
 		},
 	})
 	if err != nil {
@@ -73,14 +73,14 @@ func TestCountByEventAndIDPrefix(t *testing.T) {
 	evm := NewObserver()
 	err := evm.AddHandlers([]EventHandler{
 		{
-			EventName: "event_b",
-			ID:        "id1",
-			Func:      func(ctx *EventCtx) {},
+			Name: "event_b",
+			ID:   "id1",
+			Func: func(ctx *EventCtx) {},
 		},
 		{
-			EventName: "event_b",
-			ID:        "id1",
-			Func:      func(ctx *EventCtx) {},
+			Name: "event_b",
+			ID:   "id1",
+			Func: func(ctx *EventCtx) {},
 		},
 	})
 	if err != nil {
@@ -94,14 +94,14 @@ func TestDeleteByID(t *testing.T) {
 	evm := NewObserver()
 	err := evm.AddHandlers([]EventHandler{
 		{
-			EventName: "event_b",
-			ID:        "id1",
-			Func:      func(ctx *EventCtx) {},
+			Name: "event_b",
+			ID:   "id1",
+			Func: func(ctx *EventCtx) {},
 		},
 		{
-			EventName: "event_b",
-			ID:        "id1",
-			Func:      func(ctx *EventCtx) {},
+			Name: "event_b",
+			ID:   "id1",
+			Func: func(ctx *EventCtx) {},
 		},
 	})
 
@@ -126,8 +126,8 @@ func TestRecursionNotAllowed(t *testing.T) {
 	testVal := "value"
 	err := evm.AddHandlers([]EventHandler{
 		{
-			EventName: "event_a",
-			ID:        "id2",
+			Name: "event_a",
+			ID:   "id2",
 			Func: func(ctx *EventCtx) {
 				callstack = append(callstack, "event_a.id2")
 				commonEventHandler(ctx)
@@ -137,8 +137,8 @@ func TestRecursionNotAllowed(t *testing.T) {
 			Prio: 100,
 		},
 		{
-			EventName: "event_a",
-			ID:        "id1",
+			Name: "event_a",
+			ID:   "id1",
 			Func: func(ctx *EventCtx) {
 				callstack = append(callstack, "event_a.id1")
 				commonEventHandler(ctx)
@@ -146,8 +146,8 @@ func TestRecursionNotAllowed(t *testing.T) {
 			Prio: 200,
 		},
 		{
-			EventName: "event_b",
-			ID:        "id1",
+			Name: "event_b",
+			ID:   "id1",
 			Func: func(ctx *EventCtx) {
 				callstack = append(callstack, "event_b.id1")
 				commonEventHandler(ctx)
@@ -190,16 +190,16 @@ func TestRecursionCallLimit(t *testing.T) {
 	}
 	err := evm.AddHandlers([]EventHandler{
 		{
-			EventName: "event_a",
-			ID:        "id1",
+			Name: "event_a",
+			ID:   "id1",
 			Func: func(ctx *EventCtx) {
 				incr()
 			},
 			Prio: 100,
 		},
 		{
-			EventName: "event_a",
-			ID:        "id2",
+			Name: "event_a",
+			ID:   "id2",
 			Func: func(ctx *EventCtx) {
 				incr()
 				evm.TriggerCatch("event_b", ctx)
@@ -207,8 +207,8 @@ func TestRecursionCallLimit(t *testing.T) {
 			Prio: 200,
 		},
 		{
-			EventName: "event_b",
-			ID:        "id1",
+			Name: "event_b",
+			ID:   "id1",
 			Func: func(ctx *EventCtx) {
 				incr()
 				evm.TriggerCatch("event_a", ctx)
@@ -238,16 +238,16 @@ func TestContextTimeout(t *testing.T) {
 
 	err := evm.AddHandlers([]EventHandler{
 		{
-			EventName: "event_a",
-			ID:        "id1",
+			Name: "event_a",
+			ID:   "id1",
 			Func: func(ctx *EventCtx) {
 				time.Sleep(time.Millisecond * 1100)
 			},
 			Prio: 100,
 		},
 		{
-			EventName: "event_a",
-			ID:        "id1",
+			Name: "event_a",
+			ID:   "id1",
 			Func: func(ctx *EventCtx) {
 				// you can additionally check for expiration inside your own event handlers
 				if ctx.GoContext != nil {
@@ -285,17 +285,17 @@ func TestReverseExecutionOrder(t *testing.T) {
 	evm := NewObserver(WithExecutionOrder(ExecAscending))
 	err := evm.AddHandlers([]EventHandler{
 		{
-			EventName: "event_a",
-			ID:        "id1",
-			Prio:      50,
+			Name: "event_a",
+			ID:   "id1",
+			Prio: 50,
 			Func: func(ctx *EventCtx) {
 				execList = append(execList, ctx.HandlerID())
 			},
 		},
 		{
-			EventName: "event_a",
-			ID:        "id2",
-			Prio:      10,
+			Name: "event_a",
+			ID:   "id2",
+			Prio: 10,
 			Func: func(ctx *EventCtx) {
 				execList = append(execList, ctx.HandlerID())
 			},
@@ -340,9 +340,9 @@ func TestPanicRecover(t *testing.T) {
 	evm := NewObserver(WithPanicRecover(callback))
 	err := evm.AddHandlers([]EventHandler{
 		{
-			EventName: "event_a",
-			ID:        "id1",
-			Prio:      50,
+			Name: "event_a",
+			ID:   "id1",
+			Prio: 50,
 			Func: func(ctx *EventCtx) {
 				panic(any(42))
 			},

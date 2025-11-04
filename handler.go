@@ -4,10 +4,10 @@ import "sort"
 
 // EventHandler defines a event handler thats listening on one specific event
 type EventHandler struct {
-	EventName string          `json:"name"` // EventName
-	Prio      int             `json:"prio"`
-	Func      func(*EventCtx) `json:"-"`
-	ID        string          `json:"id"`
+	Name string          `json:"name"` // EventName
+	Prio int             `json:"prio"`
+	Func func(*EventCtx) `json:"-"`
+	ID   string          `json:"id"`
 }
 
 // EventHandlerList is a list of event handlers that provides a sorting interface

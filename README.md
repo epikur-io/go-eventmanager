@@ -117,9 +117,9 @@ func main() {
 	err := observer.AddHandlers([]eventor.EventHandler{
 		// Multiple handlers for the same event, handlers will be executed by their given order
 		{
-			EventName: "event_a",
-			ID:        "first_handler", // Unique identifier for this event handler (useful for logging & debugging)
-			Prio:      30,              // Priority for event handler execution (highest first)
+			Name: "event_a",
+			ID:   "first_handler", // Unique identifier for this event handler (useful for logging & debugging)
+			Prio: 30,              // Priority for event handler execution (highest first)
 			Func: func(ctx *eventor.EventCtx) {
 				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName(), ctx.HandlerID())
 
@@ -128,9 +128,9 @@ func main() {
 			},
 		},
 		{
-			EventName: "event_a",
-			ID:        "second_handler",
-			Prio:      20,
+			Name: "event_a",
+			ID:   "second_handler",
+			Prio: 20,
 			Func: func(ctx *eventor.EventCtx) {
 				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName(), ctx.HandlerID())
 
@@ -145,9 +145,9 @@ func main() {
 			},
 		},
 		{
-			EventName: "event_a",
-			ID:        "third_handler",
-			Prio:      10,
+			Name: "event_a",
+			ID:   "third_handler",
+			Prio: 10,
 			Func: func(ctx *eventor.EventCtx) {
 				// this should not be executed because `ctx.StopPropagation` was set to true.
 				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName(), ctx.HandlerID())

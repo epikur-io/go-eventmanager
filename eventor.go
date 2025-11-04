@@ -394,16 +394,16 @@ func (o *Observer) addHandler(e *EventHandler, opt ...bool) error {
 	if e.Func == nil {
 		return fmt.Errorf("missing function for event handler")
 	}
-	_, ok := o.eventHandlers[e.EventName]
+	_, ok := o.eventHandlers[e.Name]
 	if !ok {
-		o.eventHandlers[e.EventName] = []*EventHandler{}
+		o.eventHandlers[e.Name] = []*EventHandler{}
 	}
 	if len(opt) > 0 && opt[0] {
 		var prefixCheck bool
 		if len(opt) > 1 {
 			prefixCheck = opt[1]
 		}
-		for _, xe := range o.eventHandlers[e.EventName] {
+		for _, xe := range o.eventHandlers[e.Name] {
 			if prefixCheck {
 				if strings.HasPrefix(xe.ID, e.ID) {
 					return fmt.Errorf("event handler \"%s\" with the same id prefix \"%s\" is already registered", xe.ID, e.ID)
@@ -415,8 +415,8 @@ func (o *Observer) addHandler(e *EventHandler, opt ...bool) error {
 			}
 		}
 	}
-	o.eventHandlers[e.EventName] = append(o.eventHandlers[e.EventName], e)
-	o.eventHandlers[e.EventName].Sort(o.config.executionOrder)
+	o.eventHandlers[e.Name] = append(o.eventHandlers[e.Name], e)
+	o.eventHandlers[e.Name].Sort(o.config.executionOrder)
 	return nil
 }
 
@@ -432,7 +432,7 @@ func (o *Observer) ReplaceHandlersByEventAndID(es []EventHandler, opt ...bool) {
 	o.mux.Lock()
 	defer o.mux.Unlock()
 	for _, e := range es {
-		o.deleteByEventAndID(e.EventName, e.ID)
+		o.deleteByEventAndID(e.Name, e.ID)
 		_ = o.addHandler(&e, opt...)
 	}
 }
@@ -529,7 +529,7 @@ func (o *Observer) trigger(name string, ctx *EventCtx) (uint64, error) {
 		}
 		if o.config.hasLog {
 			o.config.logger.Debug().
-				Str("event", e.EventName).
+				Str("event", e.Name).
 				Str("event_id", e.ID).
 				Str("handler_id", handlerID).
 				Msg("executing event handler")
