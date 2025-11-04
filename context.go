@@ -8,6 +8,11 @@ import (
 // EventData holds custom data which the EventHandler can work on
 type EventData map[string]any
 
+func (ed EventData) Exists(key string) bool {
+	_, found := ed[key]
+	return found
+}
+
 func (ed EventData) Get(key string) any {
 	if v, found := ed[key]; found {
 		return v
