@@ -369,3 +369,28 @@ func TestPanicRecover(t *testing.T) {
 		t.Errorf("invalid value, got \"%s\", want \"%s\"", execList[0], first)
 	}
 }
+
+var _ EventDispatcher = &ObserverMock{}
+
+type ObserverMock struct {
+	Observer
+}
+
+func (m *ObserverMock) RegisteredHandlers() map[string]EventHandlerList            { return nil }
+func (m *ObserverMock) DeleteAll()                                                 {}
+func (m *ObserverMock) DeleteByEvent(ei string)                                    {}
+func (m *ObserverMock) DeleteByEventAndID(ei string, id string)                    {}
+func (m *ObserverMock) DeleteByID(id string) uint64                                { return uint64(0) }
+func (m *ObserverMock) DeleteByIDPrefix(prefix string) uint64                      { return uint64(0) }
+func (m *ObserverMock) CountByID(id string) uint64                                 { return 0 }
+func (m *ObserverMock) CountByIDPrefix(prefix string) uint64                       { return 0 }
+func (m *ObserverMock) CountByEventAndID(event string, id string) uint64           { return 0 }
+func (m *ObserverMock) CountByEventAndIDPrefix(event string, prefix string) uint64 { return 0 }
+func (m *ObserverMock) AddHandlers(es []EventHandler, opt ...bool) error           { return nil }
+func (m *ObserverMock) AddEventHandler(e EventHandler, opt ...bool) error          { return nil }
+func (m *ObserverMock) Trigger(name string, ctx *EventCtx) (uint64, error) {
+	return 0, nil
+}
+func (m *ObserverMock) TriggerCatch(name string, ctx *EventCtx) uint64 {
+	return 0
+}

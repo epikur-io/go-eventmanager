@@ -3,10 +3,8 @@ package eventor
 // up-to-date package with working recursion detection (2025-02-24)
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"sort"
 	"strings"
 	"sync"
 
@@ -51,137 +49,7 @@ func (so SortOrder) String() string {
 	}
 }
 
-type CallStack []string
-
-func (c CallStack) Contains(callerID string) bool {
-	for _, entry := range c {
-		if entry == callerID {
-			return true
-		}
-	}
-	return false
-}
-
-// EventData holds custom data which the EventHandler can work on
-type EventData map[string]any
-
-func (ed EventData) Get(key string) any {
-	if v, found := ed[key]; found {
-		return v
-	}
-	return nil
-}
-
-func (ed EventData) Set(key string, val any) {
-	ed[key] = val
-}
-
-type beforeCallback func(ctx *EventCtx) error
-
-type afterCallback func(ctx *EventCtx)
-
-type panicRecoverCallback = func(ctx *EventCtx, panicValue any)
-
-// EventCtx stores internal information
-type EventCtx struct {
-	// Name of the triggered event
-	eventName string
-	// HandlerID of the current handler that gets executed
-	handlerID       string
-	GoContext       context.Context
-	iterations      uint64
-	callStack       CallStack
-	eventSourceMap  map[string]uint64
-	StopPropagation bool
-	err             error
-	Data            EventData
-}
-
-// NewEventContext returns a new EventCtx necessary to trigger/run a event
-func NewEventContext(goCtx context.Context) *EventCtx {
-	ctx := &EventCtx{}
-	ctx.GoContext = goCtx
-	ctx.eventSourceMap = make(map[string]uint64)
-	ctx.Data = make(map[string]interface{})
-	return ctx
-}
-
-func (ctx *EventCtx) EventName() string {
-	return ctx.eventName
-}
-
-func (ctx *EventCtx) HandlerID() string {
-	return ctx.handlerID
-}
-
-func (ctx *EventCtx) pushCallStack(e string) {
-	ctx.callStack = append(ctx.callStack, e)
-}
-
-func (ctx *EventCtx) Err() error {
-	return ctx.err
-}
-
-func (ctx *EventCtx) addEventSource(e string, allowRecursion bool) error {
-	if _, ok := ctx.eventSourceMap[e]; ok {
-		ctx.eventSourceMap[e] += 1
-		if !allowRecursion && ctx.eventSourceMap[e] > 1 {
-			return fmt.Errorf("event source \"%s\" already exists", e)
-		}
-	}
-	ctx.eventSourceMap[e] = 1
-	return nil
-}
-
-// EventHandler defines a event handler thats listening on one specific event
-type EventHandler struct {
-	EventName string          `json:"name"` // EventName
-	Prio      int             `json:"prio"`
-	Func      func(*EventCtx) `json:"-"`
-	ID        string          `json:"id"`
-}
-
-// EventHandlerList is a list of event handlers that provides a sorting interface
-type EventHandlerList []*EventHandler
-
-// SortAscending sorts the list in ascending order (lowest priority first)
-func (s EventHandlerList) Sort(order SortOrder) {
-	if order == ExecDescending {
-		sort.Sort(s)
-	} else {
-		sort.Sort(ascendingEventHandlerList(s))
-	}
-}
-
-func (s EventHandlerList) Len() int {
-	return len(s)
-}
-
-func (s EventHandlerList) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-
-// Sort by descending handler priority
-func (s EventHandlerList) Less(i, j int) bool {
-	return (s[i].Prio) > (s[j].Prio)
-}
-
-type ascendingEventHandlerList EventHandlerList
-
-func (s ascendingEventHandlerList) Len() int {
-	return len(s)
-}
-
-func (s ascendingEventHandlerList) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-
-// Less implements sorting in ascending order (lowest priority first)
-func (s ascendingEventHandlerList) Less(i, j int) bool {
-	return s[i].Prio < s[j].Prio
-}
-
-type IObserver interface {
+type EventDispatcher interface {
 	AllowRecursion(allow bool)
 	SetCallstackLimit(size int)
 	RegisteredHandlers() map[string]EventHandlerList
@@ -201,7 +69,7 @@ type IObserver interface {
 }
 
 // esnure our implementation satisfies the Observer interface
-var _ IObserver = &Observer{}
+var _ EventDispatcher = &Observer{}
 
 type config struct {
 	logger               zerolog.Logger
@@ -259,7 +127,7 @@ func WithExecutionOrder(order SortOrder) option {
 	}
 }
 
-// Observer manages the event/event chains
+// Observer manages the hanlder chains and dispatching of events.
 type Observer struct {
 	eventHandlers map[string]EventHandlerList // Event handler map
 	config        config
@@ -546,12 +414,9 @@ func (o *Observer) addHandler(e *EventHandler, opt ...bool) error {
 				}
 			}
 		}
-		o.eventHandlers[e.EventName] = append(o.eventHandlers[e.EventName], e)
-		o.eventHandlers[e.EventName].Sort(o.config.executionOrder)
-	} else {
-		o.eventHandlers[e.EventName] = append(o.eventHandlers[e.EventName], e)
-		o.eventHandlers[e.EventName].Sort(o.config.executionOrder)
 	}
+	o.eventHandlers[e.EventName] = append(o.eventHandlers[e.EventName], e)
+	o.eventHandlers[e.EventName].Sort(o.config.executionOrder)
 	return nil
 }
 
@@ -604,7 +469,7 @@ func (o *Observer) trigger(name string, ctx *EventCtx) (uint64, error) {
 		return ctx.iterations, ctx.err
 	}
 	el, ok := o.eventHandlers[name]
-	el.Sort(o.config.executionOrder)
+	// el.Sort(o.config.executionOrder)
 	if !ok || len(el) < 1 {
 		return ctx.iterations, ctx.err
 	}
@@ -681,29 +546,4 @@ func (o *Observer) trigger(name string, ctx *EventCtx) (uint64, error) {
 		ctx.iterations += 1
 	}
 	return ctx.iterations, ctx.err
-}
-
-var _ IObserver = &ObserverMock{}
-
-type ObserverMock struct {
-	Observer
-}
-
-func (m *ObserverMock) RegisteredHandlers() map[string]EventHandlerList            { return nil }
-func (m *ObserverMock) DeleteAll()                                                 {}
-func (m *ObserverMock) DeleteByEvent(ei string)                                    {}
-func (m *ObserverMock) DeleteByEventAndID(ei string, id string)                    {}
-func (m *ObserverMock) DeleteByID(id string) uint64                                { return uint64(0) }
-func (m *ObserverMock) DeleteByIDPrefix(prefix string) uint64                      { return uint64(0) }
-func (m *ObserverMock) CountByID(id string) uint64                                 { return 0 }
-func (m *ObserverMock) CountByIDPrefix(prefix string) uint64                       { return 0 }
-func (m *ObserverMock) CountByEventAndID(event string, id string) uint64           { return 0 }
-func (m *ObserverMock) CountByEventAndIDPrefix(event string, prefix string) uint64 { return 0 }
-func (m *ObserverMock) AddHandlers(es []EventHandler, opt ...bool) error           { return nil }
-func (m *ObserverMock) AddEventHandler(e EventHandler, opt ...bool) error          { return nil }
-func (m *ObserverMock) Trigger(name string, ctx *EventCtx) (uint64, error) {
-	return 0, nil
-}
-func (m *ObserverMock) TriggerCatch(name string, ctx *EventCtx) uint64 {
-	return 0
 }
