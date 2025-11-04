@@ -469,7 +469,6 @@ func (o *Observer) trigger(name string, ctx *EventCtx) (uint64, error) {
 		return ctx.iterations, ctx.err
 	}
 	el, ok := o.eventHandlers[name]
-	// el.Sort(o.config.executionOrder)
 	if !ok || len(el) < 1 {
 		return ctx.iterations, ctx.err
 	}
