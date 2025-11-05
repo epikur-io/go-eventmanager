@@ -329,22 +329,24 @@ func TestReverseExecutionOrder(t *testing.T) {
 }
 
 func TestPanicRecover(t *testing.T) {
-	execList := []any{}
+	expected := any(42)
+	result := struct {
+		afterCallback bool
+		panicValue    any
+	}{}
 	callback := func(ctx *EventCtx, r any) {
-		execList = append(execList, r)
-		expected := any(42)
-		if r != expected {
-			t.Errorf("invalid value, got \"%s\", want \"%s\"", r, expected)
-		}
+		result.panicValue = r
 	}
-	evm := NewObserver(WithPanicRecover(callback))
+	evm := NewObserver(WithPanicRecover(callback), WithAfterCallback(func(ctx *EventCtx) {
+		result.afterCallback = true
+	}))
 	err := evm.AddHandlers([]EventHandler{
 		{
 			Name: "event_a",
 			ID:   "id1",
 			Prio: 50,
 			Func: func(ctx *EventCtx) {
-				panic(any(42))
+				panic(expected)
 			},
 		},
 	})
@@ -360,13 +362,12 @@ func TestPanicRecover(t *testing.T) {
 		t.Error(err)
 	}
 
-	if len(execList) < 1 {
-		t.Error("empty result list, no recover handler executed")
+	if result.panicValue != expected {
+		t.Errorf("invalid value, got \"%s\", want \"%s\"", result.panicValue, expected)
 	}
 
-	first := any(42)
-	if execList[0] != first {
-		t.Errorf("invalid value, got \"%s\", want \"%s\"", execList[0], first)
+	if !result.afterCallback {
+		t.Error("after callback wasn't called")
 	}
 }
 
