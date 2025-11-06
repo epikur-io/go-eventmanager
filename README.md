@@ -201,13 +201,13 @@ if err != nil {
 ### Triggering Events Concurrently
 
 ```go
-go observer.Dispatch("event_a", evm.NewEventContext(context.Background()))
+go observer.Dispatch("event_a", eventor.NewEventContext(context.Background()))
 ```
 
 ### Custom Execution Order
 
 ```go
-observer := evm.NewObserver(
+observer := eventor.NewObserver(
 	evm.WithExecutionOrder(evm.ExecAscending),
 )
 ```
@@ -215,7 +215,7 @@ observer := evm.NewObserver(
 ### Using Before and After Callbacks
 
 ```go
-evm.WithBeforeCallback(func(ctx *evm.EventContext) error {
+eventor.WithBeforeCallback(func(ctx *evm.EventContext) error {
 	ctx.Data["timestamp"] = time.Now()
 	return nil
 })
