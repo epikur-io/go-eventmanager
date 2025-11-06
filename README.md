@@ -178,7 +178,7 @@ func main() {
 ### Adding Handlers Individually
 
 ```go
-observer.AddEventHandler(evm.EventHandler{
+observer.Add(evm.EventHandler{
 	EventName: "user_signup",
 	ID:        "send_welcome_email",
 	Prio:      50,
@@ -191,7 +191,7 @@ observer.AddEventHandler(evm.EventHandler{
 ### Removing Handlers
 
 ```go
-err := observer.RemoveHandler("user_signup", "send_welcome_email")
+err := observer.Remove("user_signup", "send_welcome_email")
 if err != nil {
 	log.Println("Handler removal failed:", err)
 }
@@ -200,7 +200,7 @@ if err != nil {
 ### Triggering Events Concurrently
 
 ```go
-go observer.Trigger("event_a", evm.NewEventContext(context.Background()))
+go observer.Dispatch("event_a", evm.NewEventContext(context.Background()))
 ```
 
 ### Custom Execution Order
