@@ -183,7 +183,7 @@ observer.Add(evm.EventHandler{
 	EventName: "user_signup",
 	ID:        "send_welcome_email",
 	Prio:      50,
-	Func: func(ctx *evm.EventCtx) {
+	Func: func(ctx *evm.EventContext) {
 		fmt.Println("Sending welcome email...")
 	},
 })
@@ -215,7 +215,7 @@ observer := evm.NewObserver(
 ### Using Before and After Callbacks
 
 ```go
-evm.WithBeforeCallback(func(ctx *evm.EventCtx) error {
+evm.WithBeforeCallback(func(ctx *evm.EventContext) error {
 	ctx.Data["timestamp"] = time.Now()
 	return nil
 })
