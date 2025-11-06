@@ -92,6 +92,12 @@ type EventDispatcher interface {
 // esnure our implementation satisfies the Observer interface
 var _ EventDispatcher = &Observer{}
 
+// !TODO: Optimize optional ID prefix check. Make it part of the config and add an option function for it.
+// Remove the "...opts" parameters from "observer.add(...)" method and use the observer config instead.
+// Two options:
+//	- check ID uniqueness
+//  - check ID prefix collisions
+
 type config struct {
 	logger          zerolog.Logger
 	callstackLimit  int  // The max number of callback per event
@@ -408,7 +414,7 @@ func (o *Observer) Add(e Handler, opt ...bool) error {
 // the provided function must not start goroutines that trigger other events
 // that use references of the event or event context!
 func (o *Observer) add(e *Handler, opt ...bool) error {
-	// !TODO remove "opt" parameter or rename it to prefixCheck (better naming)
+	// !TODO: remove "opt" parameter or rename it to prefixCheck (better naming)
 	if e == nil {
 		return fmt.Errorf("missing event handler")
 	}
