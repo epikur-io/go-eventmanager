@@ -53,14 +53,14 @@ type EventDispatcher interface {
 	AllowRecursion(allow bool)
 	SetCallstackLimit(size int)
 
-	Handlers() map[string]EventHandlerList
+	Dispatch(eventName string, ctx *EventCtx) (uint64, error)
+	DispatchCatch(eventName string, ctx *EventCtx) uint64
 
+	Handlers() map[string]EventHandlerList
 	AddAll(eventHandlers []EventHandler, opt ...bool) error
 	Add(eventHandler EventHandler, opt ...bool) error
-
 	Clear()
 	ClearEvent(eventName string)
-
 	Remove(eventName string, id string)
 	RemoveID(id string) uint64
 	RemoveIDPrefix(prefix string) uint64
@@ -69,9 +69,6 @@ type EventDispatcher interface {
 	CountIDPrefix(prefix string) uint64
 	CountEventAndID(eventName string, id string) uint64
 	CountEventAndIDPrefix(eventName string, prefix string) uint64
-
-	Dispatch(eventName string, ctx *EventCtx) (uint64, error)
-	DispatchCatch(eventName string, ctx *EventCtx) uint64
 }
 
 // esnure our implementation satisfies the Observer interface
