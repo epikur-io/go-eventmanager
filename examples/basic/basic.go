@@ -18,7 +18,7 @@ func main() {
 	observer := eventor.NewObserver()
 
 	// Add event handlers
-	observer.AddEventHandler(eventor.EventHandler{
+	observer.Add(eventor.EventHandler{
 		Name: "user.created",
 		ID:   "send_welcome_email",
 		Prio: 50,
@@ -32,7 +32,7 @@ func main() {
 	ectx := eventor.NewEventContext(context.Background())
 	ectx.Data.Set("user", &User{ID: 1, Name: "user", Email: "user@example.com"})
 
-	count, err := observer.Trigger("user.created", ectx)
+	count, err := observer.Dispatch("user.created", ectx)
 	if err != nil {
 		log.Fatal(err)
 	}

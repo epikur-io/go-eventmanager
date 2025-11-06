@@ -14,7 +14,7 @@ type Counter struct {
 
 func TestEnforceIDUniqueness(t *testing.T) {
 	evm := NewObserver()
-	err := evm.AddHandlers([]EventHandler{
+	err := evm.AddAll([]EventHandler{
 		{
 			Name: "event_b",
 			ID:   "id1",
@@ -34,14 +34,14 @@ func TestEnforceIDUniqueness(t *testing.T) {
 	if err == nil {
 		t.Errorf("error exepcted but got %v", err)
 	}
-	if count := evm.CountByEventAndID("event_b", "id1"); count != 1 {
+	if count := evm.CountEventAndID("event_b", "id1"); count != 1 {
 		t.Errorf("expected count to equal 2 but got %d", count)
 	}
 }
 
-func TestCountByEventAndID(t *testing.T) {
+func TestCountEventAndID(t *testing.T) {
 	evm := NewObserver()
-	err := evm.AddHandlers([]EventHandler{
+	err := evm.AddAll([]EventHandler{
 		{
 			Name: "event_a",
 			ID:   "id1",
@@ -61,17 +61,17 @@ func TestCountByEventAndID(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if count := evm.CountByEventAndID("event_a", "id1"); count != 1 {
+	if count := evm.CountEventAndID("event_a", "id1"); count != 1 {
 		t.Errorf("expected count to equal 1 but got %d", count)
 	}
-	if count := evm.CountByEventAndID("event_b", "id1"); count != 2 {
+	if count := evm.CountEventAndID("event_b", "id1"); count != 2 {
 		t.Errorf("expected count to equal 2 but got %d", count)
 	}
 }
 
-func TestCountByEventAndIDPrefix(t *testing.T) {
+func TestCountEventAndIDPrefix(t *testing.T) {
 	evm := NewObserver()
-	err := evm.AddHandlers([]EventHandler{
+	err := evm.AddAll([]EventHandler{
 		{
 			Name: "event_b",
 			ID:   "id1",
@@ -86,13 +86,13 @@ func TestCountByEventAndIDPrefix(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if count := evm.CountByEventAndIDPrefix("event_b", "id"); count != 2 {
+	if count := evm.CountEventAndIDPrefix("event_b", "id"); count != 2 {
 		t.Errorf("expected count to equal 2 but got %d", count)
 	}
 }
 func TestDeleteByID(t *testing.T) {
 	evm := NewObserver()
-	err := evm.AddHandlers([]EventHandler{
+	err := evm.AddAll([]EventHandler{
 		{
 			Name: "event_b",
 			ID:   "id1",
@@ -108,7 +108,7 @@ func TestDeleteByID(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if count := evm.DeleteByID("id1"); count != 2 {
+	if count := evm.RemoveID("id1"); count != 2 {
 		t.Errorf("expected count to equal 2 but got %d", count)
 	}
 }
@@ -124,7 +124,7 @@ func TestRecursionNotAllowed(t *testing.T) {
 
 	callstack := []string{}
 	testVal := "value"
-	err := evm.AddHandlers([]EventHandler{
+	err := evm.AddAll([]EventHandler{
 		{
 			Name: "event_a",
 			ID:   "id2",
@@ -132,7 +132,7 @@ func TestRecursionNotAllowed(t *testing.T) {
 				callstack = append(callstack, "event_a.id2")
 				commonEventHandler(ctx)
 				ctx.Data["test"] = testVal
-				evm.TriggerCatch("event_b", ctx)
+				evm.DispatchCatch("event_b", ctx)
 			},
 			Prio: 100,
 		},
@@ -152,7 +152,7 @@ func TestRecursionNotAllowed(t *testing.T) {
 				callstack = append(callstack, "event_b.id1")
 				commonEventHandler(ctx)
 				ctx.Data["test"] = testVal + ".event_b"
-				evm.TriggerCatch("event_a", ctx)
+				evm.DispatchCatch("event_a", ctx)
 			},
 			Prio: 200,
 		},
@@ -164,7 +164,7 @@ func TestRecursionNotAllowed(t *testing.T) {
 	ectx := NewEventContext(context.Background())
 	ectx.Data["counter"] = &Counter{}
 
-	if cnt, err := evm.Trigger("event_a", ectx); err == nil {
+	if cnt, err := evm.Dispatch("event_a", ectx); err == nil {
 		t.Errorf("expected error but got: %v", err)
 	} else {
 		val, _ := ectx.Data["test"].(string)
@@ -188,7 +188,7 @@ func TestRecursionCallLimit(t *testing.T) {
 	incr := func() {
 		counter += 1
 	}
-	err := evm.AddHandlers([]EventHandler{
+	err := evm.AddAll([]EventHandler{
 		{
 			Name: "event_a",
 			ID:   "id1",
@@ -202,7 +202,7 @@ func TestRecursionCallLimit(t *testing.T) {
 			ID:   "id2",
 			Func: func(ctx *EventCtx) {
 				incr()
-				evm.TriggerCatch("event_b", ctx)
+				evm.DispatchCatch("event_b", ctx)
 			},
 			Prio: 200,
 		},
@@ -211,7 +211,7 @@ func TestRecursionCallLimit(t *testing.T) {
 			ID:   "id1",
 			Func: func(ctx *EventCtx) {
 				incr()
-				evm.TriggerCatch("event_a", ctx)
+				evm.DispatchCatch("event_a", ctx)
 			},
 			Prio: 200,
 		},
@@ -224,7 +224,7 @@ func TestRecursionCallLimit(t *testing.T) {
 	defer cancel()
 	ectx := NewEventContext(gctx)
 
-	if cnt, err := evm.Trigger("event_a", ectx); err == nil {
+	if cnt, err := evm.Dispatch("event_a", ectx); err == nil {
 		t.Errorf("error expected but got %v. iterations: %d", err, cnt)
 	}
 
@@ -236,7 +236,7 @@ func TestRecursionCallLimit(t *testing.T) {
 func TestContextTimeout(t *testing.T) {
 	evm := NewObserver()
 
-	err := evm.AddHandlers([]EventHandler{
+	err := evm.AddAll([]EventHandler{
 		{
 			Name: "event_a",
 			ID:   "id1",
@@ -269,7 +269,7 @@ func TestContextTimeout(t *testing.T) {
 	defer cancel()
 	ectx := NewEventContext(gctx)
 
-	if cnt, err := evm.Trigger("event_a", ectx); err == nil {
+	if cnt, err := evm.Dispatch("event_a", ectx); err == nil {
 		t.Errorf("error expected but got %v. iterations: %d", err, cnt)
 	}
 
@@ -283,7 +283,7 @@ func TestContextTimeout(t *testing.T) {
 func TestReverseExecutionOrder(t *testing.T) {
 	execList := []string{}
 	evm := NewObserver(WithExecutionOrder(ExecAscending))
-	err := evm.AddHandlers([]EventHandler{
+	err := evm.AddAll([]EventHandler{
 		{
 			Name: "event_a",
 			ID:   "id1",
@@ -309,7 +309,7 @@ func TestReverseExecutionOrder(t *testing.T) {
 	defer cancel()
 	ectx := NewEventContext(gctx)
 
-	if _, err := evm.Trigger("event_a", ectx); err != nil {
+	if _, err := evm.Dispatch("event_a", ectx); err != nil {
 		t.Error(err)
 	}
 
@@ -340,7 +340,7 @@ func TestPanicRecover(t *testing.T) {
 	evm := NewObserver(WithPanicRecover(callback), WithAfterCallback(func(ctx *EventCtx) {
 		result.afterCallback = true
 	}))
-	err := evm.AddHandlers([]EventHandler{
+	err := evm.AddAll([]EventHandler{
 		{
 			Name: "event_a",
 			ID:   "id1",
@@ -358,7 +358,7 @@ func TestPanicRecover(t *testing.T) {
 	defer cancel()
 	ectx := NewEventContext(gctx)
 
-	if _, err := evm.Trigger("event_a", ectx); err != nil {
+	if _, err := evm.Dispatch("event_a", ectx); err != nil {
 		t.Error(err)
 	}
 
@@ -377,21 +377,21 @@ type ObserverMock struct {
 	Observer
 }
 
-func (m *ObserverMock) RegisteredHandlers() map[string]EventHandlerList            { return nil }
-func (m *ObserverMock) DeleteAll()                                                 {}
-func (m *ObserverMock) DeleteByEvent(ei string)                                    {}
-func (m *ObserverMock) DeleteByEventAndID(ei string, id string)                    {}
-func (m *ObserverMock) DeleteByID(id string) uint64                                { return uint64(0) }
-func (m *ObserverMock) DeleteByIDPrefix(prefix string) uint64                      { return uint64(0) }
-func (m *ObserverMock) CountByID(id string) uint64                                 { return 0 }
-func (m *ObserverMock) CountByIDPrefix(prefix string) uint64                       { return 0 }
-func (m *ObserverMock) CountByEventAndID(event string, id string) uint64           { return 0 }
-func (m *ObserverMock) CountByEventAndIDPrefix(event string, prefix string) uint64 { return 0 }
-func (m *ObserverMock) AddHandlers(es []EventHandler, opt ...bool) error           { return nil }
-func (m *ObserverMock) AddEventHandler(e EventHandler, opt ...bool) error          { return nil }
-func (m *ObserverMock) Trigger(name string, ctx *EventCtx) (uint64, error) {
+func (m *ObserverMock) RegisteredHandlers() map[string]EventHandlerList          { return nil }
+func (m *ObserverMock) DeleteAll()                                               {}
+func (m *ObserverMock) DeleteByEvent(ei string)                                  {}
+func (m *ObserverMock) DeleteByEventAndID(ei string, id string)                  {}
+func (m *ObserverMock) DeleteByID(id string) uint64                              { return uint64(0) }
+func (m *ObserverMock) DeleteByIDPrefix(prefix string) uint64                    { return uint64(0) }
+func (m *ObserverMock) CountID(id string) uint64                                 { return 0 }
+func (m *ObserverMock) CountIDPrefix(prefix string) uint64                       { return 0 }
+func (m *ObserverMock) CountEventAndID(event string, id string) uint64           { return 0 }
+func (m *ObserverMock) CountEventAndIDPrefix(event string, prefix string) uint64 { return 0 }
+func (m *ObserverMock) AddAll(es []EventHandler, opt ...bool) error              { return nil }
+func (m *ObserverMock) AddEventHandler(e EventHandler, opt ...bool) error        { return nil }
+func (m *ObserverMock) Dispatch(name string, ctx *EventCtx) (uint64, error) {
 	return 0, nil
 }
-func (m *ObserverMock) TriggerCatch(name string, ctx *EventCtx) uint64 {
+func (m *ObserverMock) DispatchCatch(name string, ctx *EventCtx) uint64 {
 	return 0
 }

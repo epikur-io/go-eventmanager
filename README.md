@@ -114,7 +114,7 @@ func main() {
 
 	// Add multiple event handlers / hooks
 	// use "observer.AddEventHandler(evm.EventHandler{..})" to add a  single event handle
-	err := observer.AddHandlers([]eventor.EventHandler{
+	err := observer.AddAll([]eventor.EventHandler{
 		// Multiple handlers for the same event, handlers will be executed by their given order
 		{
 			Name: "event_a",
@@ -164,7 +164,7 @@ func main() {
 	ectx := eventor.NewEventContext(expiry)
 
 	// Trigger an event
-	cnt, err := observer.Trigger("event_a", ectx) // calling `Trigger(...)` sequentially executes all event handlers for `event_a` ordered descending by the event handlers' priority.
+	cnt, err := observer.Dispatch("event_a", ectx) // calling `Dispatch(...)` sequentially executes all event handlers for `event_a` ordered descending by the event handlers' priority.
 	if err != nil {
 		log.Panic(err)
 	}

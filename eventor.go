@@ -52,20 +52,26 @@ func (so SortOrder) String() string {
 type EventDispatcher interface {
 	AllowRecursion(allow bool)
 	SetCallstackLimit(size int)
-	RegisteredHandlers() map[string]EventHandlerList
-	DeleteAll()
-	DeleteByEvent(eventName string)
-	DeleteByEventAndID(eventName string, id string)
-	DeleteByID(id string) uint64
-	DeleteByIDPrefix(prefix string) uint64
-	CountByID(id string) uint64
-	CountByIDPrefix(prefix string) uint64
-	CountByEventAndID(eventName string, id string) uint64
-	CountByEventAndIDPrefix(eventName string, prefix string) uint64
-	AddHandlers(eventHandlers []EventHandler, opt ...bool) error
-	AddEventHandler(eventHandler EventHandler, opt ...bool) error
-	Trigger(eventName string, ctx *EventCtx) (uint64, error)
-	TriggerCatch(eventName string, ctx *EventCtx) uint64
+
+	Handlers() map[string]EventHandlerList
+
+	AddAll(eventHandlers []EventHandler, opt ...bool) error
+	Add(eventHandler EventHandler, opt ...bool) error
+
+	Clear()
+	ClearEvent(eventName string)
+
+	Remove(eventName string, id string)
+	RemoveID(id string) uint64
+	RemoveIDPrefix(prefix string) uint64
+
+	CountID(id string) uint64
+	CountIDPrefix(prefix string) uint64
+	CountEventAndID(eventName string, id string) uint64
+	CountEventAndIDPrefix(eventName string, prefix string) uint64
+
+	Dispatch(eventName string, ctx *EventCtx) (uint64, error)
+	DispatchCatch(eventName string, ctx *EventCtx) uint64
 }
 
 // esnure our implementation satisfies the Observer interface
@@ -175,7 +181,7 @@ func (o *Observer) SetCallstackLimit(size int) {
 }
 
 // Returns all registered event handlers mapped by eventName->Handler
-func (o *Observer) RegisteredHandlers() map[string]EventHandlerList {
+func (o *Observer) Handlers() map[string]EventHandlerList {
 	o.mux.RLock()
 	var meta map[string]EventHandlerList = make(map[string]EventHandlerList)
 	for e, ec := range o.eventHandlers {
@@ -187,7 +193,7 @@ func (o *Observer) RegisteredHandlers() map[string]EventHandlerList {
 }
 
 // Deletes all registered event handlers
-func (o *Observer) DeleteAll() {
+func (o *Observer) Clear() {
 	o.mux.Lock()
 	o.deleteAll()
 	o.mux.Unlock()
@@ -198,24 +204,24 @@ func (m *Observer) deleteAll() {
 }
 
 // DeleteByEvent deletes event handler by its event name their listening on
-func (o *Observer) DeleteByEvent(ei string) {
+func (o *Observer) ClearEvent(ei string) {
 	o.mux.Lock()
-	o.deleteByEvent(ei)
+	o.clearEvent(ei)
 	o.mux.Unlock()
 }
 
-func (o *Observer) deleteByEvent(ei string) {
+func (o *Observer) clearEvent(ei string) {
 	delete(o.eventHandlers, ei)
 }
 
 // Deletes the registered event handlers filtered by event name and ID
-func (o *Observer) DeleteByEventAndID(ei string, id string) {
+func (o *Observer) Remove(ei string, id string) {
 	o.mux.Lock()
-	o.deleteByEventAndID(ei, id)
+	o.remove(ei, id)
 	o.mux.Unlock()
 }
 
-func (o *Observer) deleteByEventAndID(ei string, id string) {
+func (o *Observer) remove(ei string, id string) {
 	ev, ok := o.eventHandlers[ei]
 	if !ok || len(ev) < 1 {
 		return
@@ -239,13 +245,13 @@ func (o *Observer) deleteByEventAndID(ei string, id string) {
 }
 
 // Deletes all event handlers with the given ID ignoring the event name
-func (o *Observer) DeleteByID(id string) uint64 {
+func (o *Observer) RemoveID(id string) uint64 {
 	o.mux.Lock()
-	deleted := o.deleteByID(id)
+	deleted := o.removeID(id)
 	o.mux.Unlock()
 	return deleted
 }
-func (o *Observer) deleteByID(id string) uint64 {
+func (o *Observer) removeID(id string) uint64 {
 	total := 0
 	for ei, ev := range o.eventHandlers {
 		deleted := 0
@@ -270,7 +276,7 @@ func (o *Observer) deleteByID(id string) uint64 {
 }
 
 // Deletes all event handlers that where the ID starts with the given prefix
-func (o *Observer) DeleteByIDPrefix(prefix string) uint64 {
+func (o *Observer) RemoveIDPrefix(prefix string) uint64 {
 	o.mux.Lock()
 	total := 0
 	for ei, ev := range o.eventHandlers {
@@ -297,7 +303,7 @@ func (o *Observer) DeleteByIDPrefix(prefix string) uint64 {
 }
 
 // Returns the number of event handlers registers with the given ID ignoring the event name
-func (o *Observer) CountByID(id string) uint64 {
+func (o *Observer) CountID(id string) uint64 {
 	o.mux.RLock()
 	found := uint64(0)
 	for _, ev := range o.eventHandlers {
@@ -312,7 +318,7 @@ func (o *Observer) CountByID(id string) uint64 {
 }
 
 // Returns the number of registered event handlers filterd by ID ignoring the name
-func (o *Observer) CountByIDPrefix(prefix string) uint64 {
+func (o *Observer) CountIDPrefix(prefix string) uint64 {
 	o.mux.RLock()
 	found := uint64(0)
 	for _, ev := range o.eventHandlers {
@@ -327,7 +333,7 @@ func (o *Observer) CountByIDPrefix(prefix string) uint64 {
 }
 
 // Returns the number of registered event handlers filterd by name and ID
-func (o *Observer) CountByEventAndID(event string, id string) uint64 {
+func (o *Observer) CountEventAndID(event string, id string) uint64 {
 	o.mux.RLock()
 	defer o.mux.RUnlock()
 	if _, ok := o.eventHandlers[event]; !ok {
@@ -342,7 +348,7 @@ func (o *Observer) CountByEventAndID(event string, id string) uint64 {
 	return found
 }
 
-func (o *Observer) CountByEventAndIDPrefix(event string, prefix string) uint64 {
+func (o *Observer) CountEventAndIDPrefix(event string, prefix string) uint64 {
 	o.mux.RLock()
 	defer o.mux.RUnlock()
 	if _, ok := o.eventHandlers[event]; !ok {
@@ -357,7 +363,7 @@ func (o *Observer) CountByEventAndIDPrefix(event string, prefix string) uint64 {
 	return found
 }
 
-func (o *Observer) AddHandlers(es []EventHandler, opt ...bool) error {
+func (o *Observer) AddAll(es []EventHandler, opt ...bool) error {
 	o.mux.Lock()
 	defer o.mux.Unlock()
 	errList := []string{}
@@ -366,7 +372,7 @@ func (o *Observer) AddHandlers(es []EventHandler, opt ...bool) error {
 		// if e.Order == 0 {
 		// 	e.Order = i
 		// }
-		err := o.addHandler(&e, opt...)
+		err := o.add(&e, opt...)
 		if err != nil {
 			errList = append(errList, err.Error())
 		}
@@ -377,16 +383,16 @@ func (o *Observer) AddHandlers(es []EventHandler, opt ...bool) error {
 	return nil
 }
 
-func (o *Observer) AddEventHandler(e EventHandler, opt ...bool) error {
+func (o *Observer) Add(e EventHandler, opt ...bool) error {
 	o.mux.Lock()
 	defer o.mux.Unlock()
-	return o.addHandler(&e, opt...)
+	return o.add(&e, opt...)
 }
 
 // AddEventHandler adds an event handler to the event Manager
 // the provided function must not start goroutines that trigger other events
 // that use references of the event or event context!
-func (o *Observer) addHandler(e *EventHandler, opt ...bool) error {
+func (o *Observer) add(e *EventHandler, opt ...bool) error {
 	// !TODO remove "opt" parameter or rename it to prefixCheck (better naming)
 	if e == nil {
 		return fmt.Errorf("missing event handler")
@@ -424,25 +430,25 @@ func (o *Observer) ReplaceHandlersByID(es []EventHandler, opt ...bool) {
 	o.mux.Lock()
 	defer o.mux.Unlock()
 	for _, e := range es {
-		o.deleteByID(e.ID)
-		_ = o.addHandler(&e, opt...)
+		o.RemoveID(e.ID)
+		_ = o.add(&e, opt...)
 	}
 }
 func (o *Observer) ReplaceHandlersByEventAndID(es []EventHandler, opt ...bool) {
 	o.mux.Lock()
 	defer o.mux.Unlock()
 	for _, e := range es {
-		o.deleteByEventAndID(e.Name, e.ID)
-		_ = o.addHandler(&e, opt...)
+		o.remove(e.Name, e.ID)
+		_ = o.add(&e, opt...)
 	}
 }
 
 // Triggers an event with the given data and context and logs
 // potential errors but doesn't return them
-func (o *Observer) TriggerCatch(name string, ctx *EventCtx) uint64 {
+func (o *Observer) DispatchCatch(name string, ctx *EventCtx) uint64 {
 	o.mux.RLock()
 	defer o.mux.RUnlock()
-	res, err := o.trigger(name, ctx)
+	res, err := o.dispatch(name, ctx)
 
 	if err != nil && o.config.hasLog {
 		o.config.logger.Error().
@@ -455,13 +461,13 @@ func (o *Observer) TriggerCatch(name string, ctx *EventCtx) uint64 {
 }
 
 // Triggers an event with the given data and context
-func (o *Observer) Trigger(name string, ctx *EventCtx) (uint64, error) {
+func (o *Observer) Dispatch(name string, ctx *EventCtx) (uint64, error) {
 	o.mux.RLock()
 	defer o.mux.RUnlock()
-	return o.trigger(name, ctx)
+	return o.dispatch(name, ctx)
 }
 
-func (o *Observer) trigger(name string, ctx *EventCtx) (uint64, error) {
+func (o *Observer) dispatch(name string, ctx *EventCtx) (uint64, error) {
 	if ctx == nil {
 		return 0, ErrMissingEventCtx
 	}
