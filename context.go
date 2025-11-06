@@ -28,7 +28,7 @@ type beforeCallback func(ctx *EventContext) error
 
 type afterCallback func(ctx *EventContext)
 
-type panicRecoverCallback = func(ctx *EventContext, panicValue any)
+type recoverCallback = func(ctx *EventContext, panicValue any)
 
 // EventContext stores internal information
 type EventContext struct {
@@ -36,12 +36,12 @@ type EventContext struct {
 	eventName string
 	// HandlerID of the current handler that gets executed
 	handlerID       string
-	Context         context.Context
 	iterations      uint64
 	callStack       CallStack
 	eventSourceMap  map[string]uint64
-	StopPropagation bool
 	err             error
+	StopPropagation bool
+	Context         context.Context
 	Data            Data
 }
 

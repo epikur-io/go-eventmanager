@@ -50,24 +50,42 @@ func (so SortOrder) String() string {
 }
 
 type EventDispatcher interface {
+	// Allow recursion, dispatch the same event in the event handler itself (event_a -> triggers -> event_a)
 	AllowRecursion(allow bool)
+
+	// Callstack limit, max. number of handlers to execute for a  dispatched event
 	SetCallstackLimit(size int)
 
+	// Dispatches / triggers an event
 	Dispatch(eventName string, ctx *EventContext) (uint64, error)
+	// Dispatches / triggers an event and discards the error
 	DispatchSafe(eventName string, ctx *EventContext) uint64
 
+	// Returns all registers event handlers
 	Handlers() map[string]HandlerList
+	// Adds a list of event handlers
 	AddAll(eventHandlers []Handler, opt ...bool) error
+	// Add a single event handler
 	Add(eventHandler Handler, opt ...bool) error
+
+	// Clear / remove all registered event handlers
 	Clear()
+	// Clear all event handlers for a specific event
 	ClearEvent(eventName string)
+	// Remove a specific event handlers
 	Remove(eventName string, id string)
+	// Remove all event handlers with a specific ID
 	RemoveID(id string) uint64
+	// Remove all event handlers with a specific ID prefix
 	RemoveIDPrefix(prefix string) uint64
 
+	// Returns number of registered event handlers with the specific ID
 	CountID(id string) uint64
+	// Returns number of registered event handlers with the specific ID prefx
 	CountIDPrefix(prefix string) uint64
+	// Returns number of registered event handlers for a specific event and handler ID
 	CountEventAndID(eventName string, id string) uint64
+	// Returns number of registered event handlers for a specific event and handler ID prefix
 	CountEventAndIDPrefix(eventName string, prefix string) uint64
 }
 
@@ -75,14 +93,14 @@ type EventDispatcher interface {
 var _ EventDispatcher = &Observer{}
 
 type config struct {
-	logger               zerolog.Logger
-	callstackLimit       int  // The max number of callback per event
-	allowRecursion       bool // disabled by default
-	hasLog               bool
-	panicRecoverCallback panicRecoverCallback
-	beforeCallback       beforeCallback
-	afterCallback        afterCallback
-	executionOrder       SortOrder
+	logger          zerolog.Logger
+	callstackLimit  int  // The max number of callback per event
+	allowRecursion  bool // disabled by default
+	hasLog          bool
+	recoverCallback recoverCallback
+	beforeCallback  beforeCallback
+	afterCallback   afterCallback
+	executionOrder  SortOrder
 }
 
 type option func(*config)
@@ -94,9 +112,9 @@ func WithLogger(l zerolog.Logger) option {
 	}
 }
 
-func WithPanicRecover(fn panicRecoverCallback) option {
+func WithPanicRecover(fn recoverCallback) option {
 	return func(c *config) {
-		c.panicRecoverCallback = fn
+		c.recoverCallback = fn
 	}
 }
 
@@ -490,7 +508,7 @@ func (o *Observer) dispatch(name string, ctx *EventContext) (uint64, error) {
 		}
 	}
 	defer func() {
-		if o.config.panicRecoverCallback != nil {
+		if o.config.recoverCallback != nil {
 			if r := recover(); r != nil {
 				if o.config.hasLog {
 					o.config.logger.Error().
@@ -499,7 +517,7 @@ func (o *Observer) dispatch(name string, ctx *EventContext) (uint64, error) {
 						Any("panic_value", r).
 						Msg("recoverd from panic.")
 				}
-				o.config.panicRecoverCallback(ctx, r)
+				o.config.recoverCallback(ctx, r)
 			}
 		}
 		if o.config.afterCallback != nil {
