@@ -18,11 +18,11 @@ func main() {
 	observer := eventor.NewObserver()
 
 	// Add event handlers
-	observer.Add(eventor.EventHandler{
+	observer.Add(eventor.Handler{
 		Name: "user.created",
 		ID:   "send_welcome_email",
 		Prio: 50,
-		Func: func(ctx *eventor.EventCtx) {
+		Func: func(ctx *eventor.EventContext) {
 			user := ctx.Data.Get("user").(*User)
 			log.Printf("Sending welcome email to: %s", user.Email)
 		},

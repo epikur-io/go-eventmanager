@@ -17,18 +17,18 @@ func main() {
 		// default execution order is descending, highest prio first,
 		// use `evm.ExecAscending` for reverse order.
 		eventor.WithExecutionOrder(eventor.ExecDescending),
-		eventor.WithPanicRecover(func(ctx *eventor.EventCtx, panicValue any) {
+		eventor.WithPanicRecover(func(ctx *eventor.EventContext, panicValue any) {
 			log.Printf("recovered from panic caused by: %s (ID: %s), panic value: %v\n", ctx.EventName(), ctx.HandlerID(), panicValue)
 		}),
 		eventor.WithLogger(logger),
-		eventor.WithBeforeCallback(func(ctx *eventor.EventCtx) error {
+		eventor.WithBeforeCallback(func(ctx *eventor.EventContext) error {
 			// This callback runs before any event handler chain gets executed.
 			// This could be used to inject context information based on the given event `ctx.EventName()`
 			// or other parameters.
 			ctx.Data.Set("Hello", "World")
 			return nil
 		}),
-		eventor.WithAfterCallback(func(ctx *eventor.EventCtx) {
+		eventor.WithAfterCallback(func(ctx *eventor.EventContext) {
 			// This callback runs after the event handler chain was executed.
 			// This can be used to cleanup things to trigger further program logic.
 			if v := ctx.Data.Get("datetime"); v != nil {
@@ -39,13 +39,13 @@ func main() {
 
 	// Add multiple event handlers / hooks
 	// use "observer.AddEventHandler(evm.EventHandler{..})" to add a  single event handle
-	err := observer.AddAll([]eventor.EventHandler{
+	err := observer.AddAll([]eventor.Handler{
 		// Multiple handlers for the same event, handlers will be executed by their given order
 		{
 			Name: "event_a",
 			ID:   "first_handler", // Unique identifier for this event handler (useful for logging & debugging)
 			Prio: 30,              // Priority for event handler execution (highest first)
-			Func: func(ctx *eventor.EventCtx) {
+			Func: func(ctx *eventor.EventContext) {
 				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName(), ctx.HandlerID())
 
 				// add some custom data to the context
@@ -56,7 +56,7 @@ func main() {
 			Name: "event_a",
 			ID:   "second_handler",
 			Prio: 20,
-			Func: func(ctx *eventor.EventCtx) {
+			Func: func(ctx *eventor.EventContext) {
 				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName(), ctx.HandlerID())
 
 				// do some additional work on the data provided by the previous handler
@@ -73,7 +73,7 @@ func main() {
 			Name: "event_a",
 			ID:   "third_handler",
 			Prio: 10,
-			Func: func(ctx *eventor.EventCtx) {
+			Func: func(ctx *eventor.EventContext) {
 				// this should not be executed because `ctx.StopPropagation` was set to true.
 				log.Printf("executing event handler: %s (ID: %s)\n", ctx.EventName(), ctx.HandlerID())
 			},

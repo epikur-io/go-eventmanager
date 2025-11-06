@@ -53,12 +53,12 @@ type EventDispatcher interface {
 	AllowRecursion(allow bool)
 	SetCallstackLimit(size int)
 
-	Dispatch(eventName string, ctx *EventCtx) (uint64, error)
-	DispatchCatch(eventName string, ctx *EventCtx) uint64
+	Dispatch(eventName string, ctx *EventContext) (uint64, error)
+	DispatchCatch(eventName string, ctx *EventContext) uint64
 
-	Handlers() map[string]EventHandlerList
-	AddAll(eventHandlers []EventHandler, opt ...bool) error
-	Add(eventHandler EventHandler, opt ...bool) error
+	Handlers() map[string]HandlerList
+	AddAll(eventHandlers []Handler, opt ...bool) error
+	Add(eventHandler Handler, opt ...bool) error
 	Clear()
 	ClearEvent(eventName string)
 	Remove(eventName string, id string)
@@ -132,7 +132,7 @@ func WithExecutionOrder(order SortOrder) option {
 
 // Observer manages the hanlder chains and dispatching of events.
 type Observer struct {
-	eventHandlers map[string]EventHandlerList // Event handler map
+	eventHandlers map[string]HandlerList // Event handler map
 	config        config
 	mux           *sync.RWMutex
 }
@@ -157,7 +157,7 @@ func NewObserver(opts ...option) *Observer {
 // Initalizes the EventManager and must be called befor you use it when not using the constructor
 func (o *Observer) init() {
 	o.mux = &sync.RWMutex{}
-	o.eventHandlers = make(map[string]EventHandlerList)
+	o.eventHandlers = make(map[string]HandlerList)
 	if o.config.callstackLimit < 1 {
 		o.config.callstackLimit = int(DefaultCallstackLimit)
 	}
@@ -178,11 +178,11 @@ func (o *Observer) SetCallstackLimit(size int) {
 }
 
 // Returns all registered event handlers mapped by eventName->Handler
-func (o *Observer) Handlers() map[string]EventHandlerList {
+func (o *Observer) Handlers() map[string]HandlerList {
 	o.mux.RLock()
-	var meta map[string]EventHandlerList = make(map[string]EventHandlerList)
+	var meta map[string]HandlerList = make(map[string]HandlerList)
 	for e, ec := range o.eventHandlers {
-		meta[e] = EventHandlerList{}
+		meta[e] = HandlerList{}
 		copy(meta[e], ec[:])
 	}
 	o.mux.RUnlock()
@@ -197,7 +197,7 @@ func (o *Observer) Clear() {
 }
 
 func (m *Observer) deleteAll() {
-	m.eventHandlers = make(map[string]EventHandlerList)
+	m.eventHandlers = make(map[string]HandlerList)
 }
 
 // DeleteByEvent deletes event handler by its event name their listening on
@@ -360,7 +360,7 @@ func (o *Observer) CountEventAndIDPrefix(event string, prefix string) uint64 {
 	return found
 }
 
-func (o *Observer) AddAll(es []EventHandler, opt ...bool) error {
+func (o *Observer) AddAll(es []Handler, opt ...bool) error {
 	o.mux.Lock()
 	defer o.mux.Unlock()
 	errList := []string{}
@@ -380,7 +380,7 @@ func (o *Observer) AddAll(es []EventHandler, opt ...bool) error {
 	return nil
 }
 
-func (o *Observer) Add(e EventHandler, opt ...bool) error {
+func (o *Observer) Add(e Handler, opt ...bool) error {
 	o.mux.Lock()
 	defer o.mux.Unlock()
 	return o.add(&e, opt...)
@@ -389,7 +389,7 @@ func (o *Observer) Add(e EventHandler, opt ...bool) error {
 // AddEventHandler adds an event handler to the event Manager
 // the provided function must not start goroutines that trigger other events
 // that use references of the event or event context!
-func (o *Observer) add(e *EventHandler, opt ...bool) error {
+func (o *Observer) add(e *Handler, opt ...bool) error {
 	// !TODO remove "opt" parameter or rename it to prefixCheck (better naming)
 	if e == nil {
 		return fmt.Errorf("missing event handler")
@@ -399,7 +399,7 @@ func (o *Observer) add(e *EventHandler, opt ...bool) error {
 	}
 	_, ok := o.eventHandlers[e.Name]
 	if !ok {
-		o.eventHandlers[e.Name] = []*EventHandler{}
+		o.eventHandlers[e.Name] = []*Handler{}
 	}
 	if len(opt) > 0 && opt[0] {
 		var prefixCheck bool
@@ -423,7 +423,7 @@ func (o *Observer) add(e *EventHandler, opt ...bool) error {
 	return nil
 }
 
-func (o *Observer) ReplaceHandlersByID(es []EventHandler, opt ...bool) {
+func (o *Observer) ReplaceHandlersByID(es []Handler, opt ...bool) {
 	o.mux.Lock()
 	defer o.mux.Unlock()
 	for _, e := range es {
@@ -431,7 +431,7 @@ func (o *Observer) ReplaceHandlersByID(es []EventHandler, opt ...bool) {
 		_ = o.add(&e, opt...)
 	}
 }
-func (o *Observer) ReplaceHandlersByEventAndID(es []EventHandler, opt ...bool) {
+func (o *Observer) ReplaceHandlersByEventAndID(es []Handler, opt ...bool) {
 	o.mux.Lock()
 	defer o.mux.Unlock()
 	for _, e := range es {
@@ -442,7 +442,7 @@ func (o *Observer) ReplaceHandlersByEventAndID(es []EventHandler, opt ...bool) {
 
 // Triggers an event with the given data and context and logs
 // potential errors but doesn't return them
-func (o *Observer) DispatchCatch(name string, ctx *EventCtx) uint64 {
+func (o *Observer) DispatchCatch(name string, ctx *EventContext) uint64 {
 	o.mux.RLock()
 	defer o.mux.RUnlock()
 	res, err := o.dispatch(name, ctx)
@@ -458,13 +458,13 @@ func (o *Observer) DispatchCatch(name string, ctx *EventCtx) uint64 {
 }
 
 // Triggers an event with the given data and context
-func (o *Observer) Dispatch(name string, ctx *EventCtx) (uint64, error) {
+func (o *Observer) Dispatch(name string, ctx *EventContext) (uint64, error) {
 	o.mux.RLock()
 	defer o.mux.RUnlock()
 	return o.dispatch(name, ctx)
 }
 
-func (o *Observer) dispatch(name string, ctx *EventCtx) (uint64, error) {
+func (o *Observer) dispatch(name string, ctx *EventContext) (uint64, error) {
 	if ctx == nil {
 		return 0, ErrMissingEventCtx
 	}
@@ -507,10 +507,10 @@ func (o *Observer) dispatch(name string, ctx *EventCtx) (uint64, error) {
 		}
 	}()
 	for _, e := range el {
-		if ctx.GoContext != nil {
+		if ctx.Context != nil {
 			select {
-			case <-ctx.GoContext.Done():
-				return ctx.iterations, ctx.GoContext.Err()
+			case <-ctx.Context.Done():
+				return ctx.iterations, ctx.Context.Err()
 			default:
 			}
 		}
