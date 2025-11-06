@@ -50,7 +50,16 @@ func NewEventContext(goCtx context.Context) *EventContext {
 	ctx := &EventContext{}
 	ctx.Context = goCtx
 	ctx.eventSourceMap = make(map[string]uint64)
-	ctx.Data = make(map[string]interface{})
+	ctx.Data = make(Data)
+	return ctx
+}
+
+// NewEventContext returns a new EventCtx necessary to trigger/run a event
+func NewEventContextWithData(goCtx context.Context, data map[string]any) *EventContext {
+	ctx := &EventContext{}
+	ctx.Context = goCtx
+	ctx.eventSourceMap = make(map[string]uint64)
+	ctx.Data = data
 	return ctx
 }
 

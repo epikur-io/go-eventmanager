@@ -389,10 +389,6 @@ func (o *Observer) AddAll(es []Handler, opt ...bool) error {
 	defer o.mux.Unlock()
 	errList := []string{}
 	for _, e := range es {
-		// // automatic order
-		// if e.Order == 0 {
-		// 	e.Order = i
-		// }
 		err := o.add(&e, opt...)
 		if err != nil {
 			errList = append(errList, err.Error())
