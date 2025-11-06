@@ -104,7 +104,7 @@ func main() {
 			return nil
 		}),
 		eventor.WithAfterCallback(func(ctx *eventor.EventContext) {
-			// This callback runs after the event handler chain was executed.
+			// This callback runs after the event handler chain was executed, even when a panic was recovered.
 			// This can be used to cleanup things to trigger further program logic.
 			if v := ctx.Data.Get("datetime"); v != nil {
 				fmt.Println("(AfterCallback) Datetime:", v.(time.Time).String())
