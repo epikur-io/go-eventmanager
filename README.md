@@ -25,11 +25,12 @@ The Observer is the main event manager. It maintains:
 
 - A registry of event handlers grouped by event name
 - Optional before/after hooks
+- Dispaching of events and execute event handlers
 - Thread-safe synchronization
 
 ### Event Handler
 
-An EventHandler defines how to handle a specific event.
+An event handler defines how to handle a specific event.
 It contains:
 
 ```go
@@ -48,7 +49,7 @@ Use ExecDescending (default) or ExecAscending to control the order.
 
 ### Event Context
 
-EventCtx carries:
+Event context carries:
 
 ```go
 type EventContext struct {
