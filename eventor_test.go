@@ -167,7 +167,7 @@ func TestRecursionNotAllowed(t *testing.T) {
 				callstack = append(callstack, "event_a.id2")
 				commonEventHandler(ctx)
 				ctx.Data["test"] = testVal
-				evm.DispatchCatch("event_b", ctx)
+				evm.DispatchSafe("event_b", ctx)
 			},
 			Prio: 100,
 		},
@@ -187,7 +187,7 @@ func TestRecursionNotAllowed(t *testing.T) {
 				callstack = append(callstack, "event_b.id1")
 				commonEventHandler(ctx)
 				ctx.Data["test"] = testVal + ".event_b"
-				evm.DispatchCatch("event_a", ctx)
+				evm.DispatchSafe("event_a", ctx)
 			},
 			Prio: 200,
 		},
@@ -237,7 +237,7 @@ func TestRecursionCallLimit(t *testing.T) {
 			ID:   "id2",
 			Func: func(ctx *EventContext) {
 				incr()
-				evm.DispatchCatch("event_b", ctx)
+				evm.DispatchSafe("event_b", ctx)
 			},
 			Prio: 200,
 		},
@@ -246,7 +246,7 @@ func TestRecursionCallLimit(t *testing.T) {
 			ID:   "id1",
 			Func: func(ctx *EventContext) {
 				incr()
-				evm.DispatchCatch("event_a", ctx)
+				evm.DispatchSafe("event_a", ctx)
 			},
 			Prio: 200,
 		},
@@ -427,6 +427,6 @@ func (m *ObserverMock) AddEventHandler(e Handler, opt ...bool) error            
 func (m *ObserverMock) Dispatch(name string, ctx *EventContext) (uint64, error) {
 	return 0, nil
 }
-func (m *ObserverMock) DispatchCatch(name string, ctx *EventContext) uint64 {
+func (m *ObserverMock) DispatchSafe(name string, ctx *EventContext) uint64 {
 	return 0
 }

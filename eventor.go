@@ -54,7 +54,7 @@ type EventDispatcher interface {
 	SetCallstackLimit(size int)
 
 	Dispatch(eventName string, ctx *EventContext) (uint64, error)
-	DispatchCatch(eventName string, ctx *EventContext) uint64
+	DispatchSafe(eventName string, ctx *EventContext) uint64
 
 	Handlers() map[string]HandlerList
 	AddAll(eventHandlers []Handler, opt ...bool) error
@@ -442,7 +442,7 @@ func (o *Observer) ReplaceHandlersByEventAndID(es []Handler, opt ...bool) {
 
 // Triggers an event with the given data and context and logs
 // potential errors but doesn't return them
-func (o *Observer) DispatchCatch(name string, ctx *EventContext) uint64 {
+func (o *Observer) DispatchSafe(name string, ctx *EventContext) uint64 {
 	o.mux.RLock()
 	defer o.mux.RUnlock()
 	res, err := o.dispatch(name, ctx)
