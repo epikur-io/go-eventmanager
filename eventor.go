@@ -118,9 +118,12 @@ type config struct {
 
 type option func(*config)
 
-func WithLogger(l zerolog.Logger) option {
+func WithLogger(l *zerolog.Logger) option {
 	return func(c *config) {
-		c.logger = l
+		if l == nil {
+			return
+		}
+		c.logger = *l
 		c.hasLog = true
 	}
 }
@@ -202,6 +205,9 @@ func NewObserver(opts ...option) *Observer {
 
 // Initalizes the EventManager and must be called befor you use it when not using the constructor
 func (o *Observer) init() {
+	if !o.config.hasLog {
+		o.config.logger = zerolog.Nop()
+	}
 	o.mux = &sync.RWMutex{}
 	o.eventHandlers = make(map[string]HandlerList)
 	if o.config.callstackLimit < 1 {
@@ -485,7 +491,7 @@ func (o *Observer) DispatchSafe(name string, ctx *EventContext) uint64 {
 	defer o.mux.RUnlock()
 	res, err := o.dispatch(name, ctx)
 
-	if err != nil && o.config.hasLog {
+	if err != nil {
 		o.config.logger.Error().
 			Str("event", name).
 			Err(err).
@@ -530,13 +536,11 @@ func (o *Observer) dispatch(name string, ctx *EventContext) (uint64, error) {
 	defer func() {
 		if o.config.recoverCallback != nil {
 			if r := recover(); r != nil {
-				if o.config.hasLog {
-					o.config.logger.Error().
-						Str("event", ctx.eventName).
-						Str("handler_id", ctx.handlerID).
-						Any("panic_value", r).
-						Msg("recoverd from panic.")
-				}
+				o.config.logger.Error().
+					Str("event", ctx.eventName).
+					Str("handler_id", ctx.handlerID).
+					Any("panic_value", r).
+					Msg("recoverd from panic.")
 				o.config.recoverCallback(ctx, r)
 			}
 		}
@@ -568,13 +572,11 @@ func (o *Observer) dispatch(name string, ctx *EventContext) (uint64, error) {
 		if ctx.StopPropagation {
 			return ctx.iterations, ctx.err
 		}
-		if o.config.hasLog {
-			o.config.logger.Debug().
-				Str("event", e.Name).
-				Str("event_id", e.ID).
-				Str("handler_id", handlerID).
-				Msg("executing event handler")
-		}
+		o.config.logger.Debug().
+			Str("event", e.Name).
+			Str("event_id", e.ID).
+			Str("handler_id", handlerID).
+			Msg("executing event handler")
 		ctx.pushCallStack(handlerID)
 		ctx.handlerID = e.ID
 		sourceEventName := ctx.eventName
