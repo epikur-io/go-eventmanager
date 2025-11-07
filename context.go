@@ -45,7 +45,7 @@ type EventContext struct {
 	Data            Data
 }
 
-// NewEventContext returns a new EventCtx necessary to trigger/run a event
+// NewEventContext returns a new EventContext necessary to trigger/run a event
 func NewEventContext(goCtx context.Context) *EventContext {
 	ctx := &EventContext{}
 	ctx.Context = goCtx
@@ -54,7 +54,7 @@ func NewEventContext(goCtx context.Context) *EventContext {
 	return ctx
 }
 
-// NewEventContext returns a new EventCtx necessary to trigger/run a event
+// NewEventContext returns a new EventContext necessary to trigger/run a event
 func NewEventContextWithData(goCtx context.Context, data map[string]any) *EventContext {
 	ctx := &EventContext{}
 	ctx.Context = goCtx
