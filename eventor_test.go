@@ -13,7 +13,9 @@ type Counter struct {
 }
 
 func TestEnforceIDUniqueness(t *testing.T) {
-	observer := NewObserver()
+	observer := NewObserver(
+		WithUniqueIDs(),
+	)
 	err := observer.AddAll([]Handler{
 		{
 			Name: "event_b",
@@ -30,7 +32,7 @@ func TestEnforceIDUniqueness(t *testing.T) {
 			ID:   "id",
 			Func: func(ctx *EventContext) {},
 		},
-	}, true, false)
+	})
 	if err == nil {
 		t.Errorf("error exepcted but got %v", err)
 	}
@@ -44,7 +46,10 @@ func TestEnforceIDUniqueness(t *testing.T) {
 }
 
 func TestEnforceIDUniquenessWithPrefixCheck(t *testing.T) {
-	observer := NewObserver()
+	observer := NewObserver(
+		WithUniqueIDs(),
+		WithUniqueIDsPrefixCheck(),
+	)
 	err := observer.AddAll([]Handler{
 		{
 			Name: "event_b",
@@ -61,7 +66,7 @@ func TestEnforceIDUniquenessWithPrefixCheck(t *testing.T) {
 			ID:   "id",
 			Func: func(ctx *EventContext) {},
 		},
-	}, true, true)
+	})
 	if err == nil {
 		t.Errorf("error exepcted but got %v", err)
 	}
@@ -419,8 +424,8 @@ func (m *ObserverMock) CountID(id string) uint64                                
 func (m *ObserverMock) CountIDPrefix(prefix string) uint64                       { return 0 }
 func (m *ObserverMock) CountEventAndID(event string, id string) uint64           { return 0 }
 func (m *ObserverMock) CountEventAndIDPrefix(event string, prefix string) uint64 { return 0 }
-func (m *ObserverMock) AddAll(es []Handler, opt ...bool) error                   { return nil }
-func (m *ObserverMock) AddEventHandler(e Handler, opt ...bool) error             { return nil }
+func (m *ObserverMock) AddAll(es []Handler) error                                { return nil }
+func (m *ObserverMock) AddEventHandler(e Handler) error                          { return nil }
 func (m *ObserverMock) Dispatch(name string, ctx *EventContext) (uint64, error) {
 	return 0, nil
 }

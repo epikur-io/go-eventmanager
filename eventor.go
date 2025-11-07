@@ -64,9 +64,9 @@ type EventDispatcher interface {
 	// Returns all registers event handlers
 	Handlers() map[string]HandlerList
 	// Adds a list of event handlers
-	AddAll(eventHandlers []Handler, opt ...bool) error
+	AddAll(eventHandlers []Handler) error
 	// Add a single event handler
-	Add(eventHandler Handler, opt ...bool) error
+	Add(eventHandler Handler) error
 
 	// Clear / remove all registered event handlers
 	Clear()
@@ -104,14 +104,16 @@ var _ EventDispatcher = &Observer{}
 //  - check ID prefix collisions
 
 type config struct {
-	logger          zerolog.Logger
-	callstackLimit  int  // The max number of callback per event
-	allowRecursion  bool // disabled by default
-	hasLog          bool
-	recoverCallback recoverCallback
-	beforeCallback  beforeCallback
-	afterCallback   afterCallback
-	executionOrder  SortOrder
+	logger              zerolog.Logger
+	callstackLimit      int  // The max number of callback per event
+	allowRecursion      bool // disabled by default
+	hasLog              bool
+	recoverCallback     recoverCallback
+	beforeCallback      beforeCallback
+	afterCallback       afterCallback
+	executionOrder      SortOrder
+	uniqueID            bool
+	uniqueIDPrefixCheck bool
 }
 
 type option func(*config)
@@ -156,6 +158,20 @@ func WithAfterCallback(f afterCallback) option {
 func WithExecutionOrder(order SortOrder) option {
 	return func(c *config) {
 		c.executionOrder = order
+	}
+}
+
+// Ensure that IDs of event handlers are unique per event
+func WithUniqueIDs() option {
+	return func(c *config) {
+		c.uniqueID = true
+	}
+}
+
+// Ensure that IDs of event handlers are unique and don't have overlapping prefixes per event
+func WithUniqueIDsPrefixCheck() option {
+	return func(c *config) {
+		c.uniqueIDPrefixCheck = true
 	}
 }
 
@@ -389,12 +405,12 @@ func (o *Observer) CountEventAndIDPrefix(event string, prefix string) uint64 {
 	return found
 }
 
-func (o *Observer) AddAll(es []Handler, opt ...bool) error {
+func (o *Observer) AddAll(es []Handler) error {
 	o.mux.Lock()
 	defer o.mux.Unlock()
 	errList := []string{}
 	for _, e := range es {
-		err := o.add(&e, opt...)
+		err := o.add(&e)
 		if err != nil {
 			errList = append(errList, err.Error())
 		}
@@ -405,16 +421,16 @@ func (o *Observer) AddAll(es []Handler, opt ...bool) error {
 	return nil
 }
 
-func (o *Observer) Add(e Handler, opt ...bool) error {
+func (o *Observer) Add(e Handler) error {
 	o.mux.Lock()
 	defer o.mux.Unlock()
-	return o.add(&e, opt...)
+	return o.add(&e)
 }
 
 // AddEventHandler adds an event handler to the event Manager
 // the provided function must not start goroutines that trigger other events
 // that use references of the event or event context!
-func (o *Observer) add(e *Handler, opt ...bool) error {
+func (o *Observer) add(e *Handler) error {
 	// !TODO: remove "opt" parameter or rename it to prefixCheck (better naming)
 	if e == nil {
 		return fmt.Errorf("missing event handler")
@@ -426,13 +442,9 @@ func (o *Observer) add(e *Handler, opt ...bool) error {
 	if !ok {
 		o.eventHandlers[e.Name] = []*Handler{}
 	}
-	if len(opt) > 0 && opt[0] {
-		var prefixCheck bool
-		if len(opt) > 1 {
-			prefixCheck = opt[1]
-		}
+	if o.config.uniqueID {
 		for _, xe := range o.eventHandlers[e.Name] {
-			if prefixCheck {
+			if o.config.uniqueIDPrefixCheck {
 				if strings.HasPrefix(xe.ID, e.ID) {
 					return fmt.Errorf("event handler \"%s\" with the same id prefix \"%s\" is already registered", xe.ID, e.ID)
 				}
@@ -453,7 +465,7 @@ func (o *Observer) ReplaceID(es []Handler, opt ...bool) {
 	defer o.mux.Unlock()
 	for _, e := range es {
 		o.RemoveID(e.ID)
-		_ = o.add(&e, opt...)
+		_ = o.add(&e)
 	}
 }
 func (o *Observer) ReplaceEventAndID(es []Handler, opt ...bool) {
@@ -461,7 +473,7 @@ func (o *Observer) ReplaceEventAndID(es []Handler, opt ...bool) {
 	defer o.mux.Unlock()
 	for _, e := range es {
 		o.remove(e.Name, e.ID)
-		_ = o.add(&e, opt...)
+		_ = o.add(&e)
 	}
 }
 
