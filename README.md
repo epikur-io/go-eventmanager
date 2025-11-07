@@ -96,7 +96,7 @@ func main() {
 		eventor.WithPanicRecover(func(ctx *eventor.EventContext, panicValue any) {
 			log.Printf("recovered from panic caused by: %s (ID: %s), panic value: %v\n", ctx.EventName(), ctx.HandlerID(), panicValue)
 		}),
-		eventor.WithLogger(logger),
+		eventor.WithLogger(&logger),
 		eventor.WithBeforeCallback(func(ctx *eventor.EventContext) error {
 			// This callback runs before any event handler chain gets executed.
 			// This could be used to inject context information based on the given event `ctx.EventName()`
