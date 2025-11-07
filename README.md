@@ -38,7 +38,7 @@ type Handler struct {
     EventName string
     ID        string
     Prio      int
-    Func      func(ctx *EventCtx)
+    Func      func(ctx *EventContext)
 }
 ```
 
@@ -91,7 +91,7 @@ func main() {
 	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
 	observer := eventor.NewObserver(
 		// default execution order is descending, highest prio first,
-		// use `evm.ExecAscending` for reverse order.
+		// use `eventor.ExecAscending` for reverse order.
 		eventor.WithExecutionOrder(eventor.ExecDescending),
 		eventor.WithPanicRecover(func(ctx *eventor.EventContext, panicValue any) {
 			log.Printf("recovered from panic caused by: %s (ID: %s), panic value: %v\n", ctx.EventName(), ctx.HandlerID(), panicValue)
@@ -114,7 +114,7 @@ func main() {
 	)
 
 	// Add multiple event handlers / hooks
-	// use "observer.AddEventHandler(evm.EventHandler{..})" to add a  single event handle
+	// use "observer.AddEventHandler(eventor.EventHandler{..})" to add a  single event handle
 	err := observer.AddAll([]eventor.Handler{
 		// Multiple handlers for the same event, handlers will be executed by their given order
 		{
@@ -179,11 +179,11 @@ func main() {
 ### Adding Handlers Individually
 
 ```go
-observer.Add(evm.EventHandler{
+observer.Add(eventor.EventHandler{
 	EventName: "user_signup",
 	ID:        "send_welcome_email",
 	Prio:      50,
-	Func: func(ctx *evm.EventContext) {
+	Func: func(ctx *eventor.EventContext) {
 		fmt.Println("Sending welcome email...")
 	},
 })
@@ -208,14 +208,14 @@ go observer.Dispatch("event_a", eventor.NewEventContext(context.Background()))
 
 ```go
 observer := eventor.NewObserver(
-	evm.WithExecutionOrder(evm.ExecAscending),
+	eventor.WithExecutionOrder(eventor.ExecAscending),
 )
 ```
 
 ### Using Before and After Callbacks
 
 ```go
-eventor.WithBeforeCallback(func(ctx *evm.EventContext) error {
+eventor.WithBeforeCallback(func(ctx *eventor.EventContext) error {
 	ctx.Data["timestamp"] = time.Now()
 	return nil
 })

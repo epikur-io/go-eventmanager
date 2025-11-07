@@ -13,8 +13,8 @@ type Counter struct {
 }
 
 func TestEnforceIDUniqueness(t *testing.T) {
-	evm := NewObserver()
-	err := evm.AddAll([]Handler{
+	observer := NewObserver()
+	err := observer.AddAll([]Handler{
 		{
 			Name: "event_b",
 			ID:   "id1",
@@ -34,18 +34,18 @@ func TestEnforceIDUniqueness(t *testing.T) {
 	if err == nil {
 		t.Errorf("error exepcted but got %v", err)
 	}
-	if count := evm.CountEventAndID("event_b", "id1"); count != 1 {
+	if count := observer.CountEventAndID("event_b", "id1"); count != 1 {
 		t.Errorf("expected count to equal 1 but got %d", count)
 	}
 
-	if count := evm.CountEventAndID("event_b", "id"); count != 1 {
+	if count := observer.CountEventAndID("event_b", "id"); count != 1 {
 		t.Errorf("expected count to equal 1 but got %d", count)
 	}
 }
 
 func TestEnforceIDUniquenessWithPrefixCheck(t *testing.T) {
-	evm := NewObserver()
-	err := evm.AddAll([]Handler{
+	observer := NewObserver()
+	err := observer.AddAll([]Handler{
 		{
 			Name: "event_b",
 			ID:   "id1",
@@ -65,18 +65,18 @@ func TestEnforceIDUniquenessWithPrefixCheck(t *testing.T) {
 	if err == nil {
 		t.Errorf("error exepcted but got %v", err)
 	}
-	if count := evm.CountEventAndID("event_b", "id1"); count != 1 {
+	if count := observer.CountEventAndID("event_b", "id1"); count != 1 {
 		t.Errorf("expected count to equal 1 but got %d", count)
 	}
 
-	if count := evm.CountEventAndID("event_b", "id"); count != 0 {
+	if count := observer.CountEventAndID("event_b", "id"); count != 0 {
 		t.Errorf("expected count to equal 0 but got %d", count)
 	}
 }
 
 func TestCountEventAndID(t *testing.T) {
-	evm := NewObserver()
-	err := evm.AddAll([]Handler{
+	observer := NewObserver()
+	err := observer.AddAll([]Handler{
 		{
 			Name: "event_a",
 			ID:   "id1",
@@ -96,17 +96,17 @@ func TestCountEventAndID(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if count := evm.CountEventAndID("event_a", "id1"); count != 1 {
+	if count := observer.CountEventAndID("event_a", "id1"); count != 1 {
 		t.Errorf("expected count to equal 1 but got %d", count)
 	}
-	if count := evm.CountEventAndID("event_b", "id1"); count != 2 {
+	if count := observer.CountEventAndID("event_b", "id1"); count != 2 {
 		t.Errorf("expected count to equal 2 but got %d", count)
 	}
 }
 
 func TestCountEventAndIDPrefix(t *testing.T) {
-	evm := NewObserver()
-	err := evm.AddAll([]Handler{
+	observer := NewObserver()
+	err := observer.AddAll([]Handler{
 		{
 			Name: "event_b",
 			ID:   "id1",
@@ -121,13 +121,13 @@ func TestCountEventAndIDPrefix(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if count := evm.CountEventAndIDPrefix("event_b", "id"); count != 2 {
+	if count := observer.CountEventAndIDPrefix("event_b", "id"); count != 2 {
 		t.Errorf("expected count to equal 2 but got %d", count)
 	}
 }
 func TestDeleteByID(t *testing.T) {
-	evm := NewObserver()
-	err := evm.AddAll([]Handler{
+	observer := NewObserver()
+	err := observer.AddAll([]Handler{
 		{
 			Name: "event_b",
 			ID:   "id1",
@@ -143,14 +143,13 @@ func TestDeleteByID(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if count := evm.RemoveID("id1"); count != 2 {
+	if count := observer.RemoveID("id1"); count != 2 {
 		t.Errorf("expected count to equal 2 but got %d", count)
 	}
 }
 
 func TestRecursionNotAllowed(t *testing.T) {
-	evm := NewObserver()
-
+	observer := NewObserver()
 	commonEventHandler := func(ctx *EventContext) {
 		if d, ok := ctx.Data["counter"].(*Counter); ok && d != nil {
 			d.Value = d.Value + 1
@@ -159,7 +158,7 @@ func TestRecursionNotAllowed(t *testing.T) {
 
 	callstack := []string{}
 	testVal := "value"
-	err := evm.AddAll([]Handler{
+	err := observer.AddAll([]Handler{
 		{
 			Name: "event_a",
 			ID:   "id2",
@@ -167,7 +166,7 @@ func TestRecursionNotAllowed(t *testing.T) {
 				callstack = append(callstack, "event_a.id2")
 				commonEventHandler(ctx)
 				ctx.Data["test"] = testVal
-				evm.DispatchSafe("event_b", ctx)
+				observer.DispatchSafe("event_b", ctx)
 			},
 			Prio: 100,
 		},
@@ -187,7 +186,7 @@ func TestRecursionNotAllowed(t *testing.T) {
 				callstack = append(callstack, "event_b.id1")
 				commonEventHandler(ctx)
 				ctx.Data["test"] = testVal + ".event_b"
-				evm.DispatchSafe("event_a", ctx)
+				observer.DispatchSafe("event_a", ctx)
 			},
 			Prio: 200,
 		},
@@ -199,7 +198,7 @@ func TestRecursionNotAllowed(t *testing.T) {
 	ectx := NewEventContext(context.Background())
 	ectx.Data["counter"] = &Counter{}
 
-	if cnt, err := evm.Dispatch("event_a", ectx); err == nil {
+	if cnt, err := observer.Dispatch("event_a", ectx); err == nil {
 		t.Errorf("expected error but got: %v", err)
 	} else {
 		val, _ := ectx.Data["test"].(string)
@@ -217,13 +216,12 @@ func TestRecursionNotAllowed(t *testing.T) {
 
 }
 func TestRecursionCallLimit(t *testing.T) {
-	evm := NewObserver(WithRecursionAllowed())
-
+	observer := NewObserver(WithRecursionAllowed())
 	counter := 0
 	incr := func() {
 		counter += 1
 	}
-	err := evm.AddAll([]Handler{
+	err := observer.AddAll([]Handler{
 		{
 			Name: "event_a",
 			ID:   "id1",
@@ -237,7 +235,7 @@ func TestRecursionCallLimit(t *testing.T) {
 			ID:   "id2",
 			Func: func(ctx *EventContext) {
 				incr()
-				evm.DispatchSafe("event_b", ctx)
+				observer.DispatchSafe("event_b", ctx)
 			},
 			Prio: 200,
 		},
@@ -246,7 +244,7 @@ func TestRecursionCallLimit(t *testing.T) {
 			ID:   "id1",
 			Func: func(ctx *EventContext) {
 				incr()
-				evm.DispatchSafe("event_a", ctx)
+				observer.DispatchSafe("event_a", ctx)
 			},
 			Prio: 200,
 		},
@@ -259,7 +257,7 @@ func TestRecursionCallLimit(t *testing.T) {
 	defer cancel()
 	ectx := NewEventContext(gctx)
 
-	if cnt, err := evm.Dispatch("event_a", ectx); err == nil {
+	if cnt, err := observer.Dispatch("event_a", ectx); err == nil {
 		t.Errorf("error expected but got %v. iterations: %d", err, cnt)
 	}
 
@@ -269,9 +267,8 @@ func TestRecursionCallLimit(t *testing.T) {
 }
 
 func TestContextTimeout(t *testing.T) {
-	evm := NewObserver()
-
-	err := evm.AddAll([]Handler{
+	observer := NewObserver()
+	err := observer.AddAll([]Handler{
 		{
 			Name: "event_a",
 			ID:   "id1",
@@ -304,7 +301,7 @@ func TestContextTimeout(t *testing.T) {
 	defer cancel()
 	ectx := NewEventContext(gctx)
 
-	if cnt, err := evm.Dispatch("event_a", ectx); err == nil {
+	if cnt, err := observer.Dispatch("event_a", ectx); err == nil {
 		t.Errorf("error expected but got %v. iterations: %d", err, cnt)
 	}
 
@@ -317,8 +314,8 @@ func TestContextTimeout(t *testing.T) {
 
 func TestReverseExecutionOrder(t *testing.T) {
 	execList := []string{}
-	evm := NewObserver(WithExecutionOrder(ExecAscending))
-	err := evm.AddAll([]Handler{
+	observer := NewObserver(WithExecutionOrder(ExecAscending))
+	err := observer.AddAll([]Handler{
 		{
 			Name: "event_a",
 			ID:   "id1",
@@ -344,7 +341,7 @@ func TestReverseExecutionOrder(t *testing.T) {
 	defer cancel()
 	ectx := NewEventContext(gctx)
 
-	if _, err := evm.Dispatch("event_a", ectx); err != nil {
+	if _, err := observer.Dispatch("event_a", ectx); err != nil {
 		t.Error(err)
 	}
 
@@ -372,10 +369,10 @@ func TestPanicRecover(t *testing.T) {
 	callback := func(ctx *EventContext, r any) {
 		result.panicValue = r
 	}
-	evm := NewObserver(WithPanicRecover(callback), WithAfterCallback(func(ctx *EventContext) {
+	observer := NewObserver(WithPanicRecover(callback), WithAfterCallback(func(ctx *EventContext) {
 		result.afterCallback = true
 	}))
-	err := evm.AddAll([]Handler{
+	err := observer.AddAll([]Handler{
 		{
 			Name: "event_a",
 			ID:   "id1",
@@ -393,7 +390,7 @@ func TestPanicRecover(t *testing.T) {
 	defer cancel()
 	ectx := NewEventContext(gctx)
 
-	if _, err := evm.Dispatch("event_a", ectx); err != nil {
+	if _, err := observer.Dispatch("event_a", ectx); err != nil {
 		t.Error(err)
 	}
 
