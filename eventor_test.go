@@ -47,7 +47,6 @@ func TestEnforceIDUniqueness(t *testing.T) {
 
 func TestEnforceIDUniquenessWithPrefixCheck(t *testing.T) {
 	observer := NewObserver(
-		WithUniqueIDs(),
 		WithUniqueIDsPrefixCheck(),
 	)
 	err := observer.AddAll([]Handler{
