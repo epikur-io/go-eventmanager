@@ -114,7 +114,7 @@ func main() {
 	)
 
 	// Add multiple event handlers / hooks
-	// use "observer.AddEventHandler(eventor.EventHandler{..})" to add a  single event handle
+	// use "observer.Add(eventor.Handler{..})" to add a  single event handle
 	err := observer.AddAll([]eventor.Handler{
 		// Multiple handlers for the same event, handlers will be executed by their given order
 		{
