@@ -171,6 +171,7 @@ func WithUniqueIDs() option {
 // Ensure that IDs of event handlers are unique and don't have overlapping prefixes per event
 func WithUniqueIDsPrefixCheck() option {
 	return func(c *config) {
+		c.uniqueID = true
 		c.uniqueIDPrefixCheck = true
 	}
 }
