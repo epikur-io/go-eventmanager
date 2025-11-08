@@ -216,6 +216,8 @@ observer := eventor.NewObserver(
 ### Using Before and After Callbacks
 
 ```go
+// When the callback returns an error, the error will be forwarded and returned
+// by the `Dispatch` method, no event handlers will be executed.
 eventor.WithBeforeCallback(func(ctx *eventor.EventContext) error {
 	ctx.Data["timestamp"] = time.Now()
 	return nil
