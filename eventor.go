@@ -26,6 +26,8 @@ const (
 )
 
 var (
+	ErrMissingEventName      = errors.New("missing event name")
+	ErrMissingHandlerFunc    = errors.New("missing event handler function")
 	ErrRecursionNotAllowed   = errors.New("recursion is not allowed")
 	ErrCallstackLimitExeeded = errors.New("callstack limit exceeded")
 	ErrMissingEventCtx       = errors.New("missing event context")
@@ -432,11 +434,11 @@ func (o *Observer) Add(e Handler) error {
 // the provided function must not start goroutines that trigger other events
 // that use references of the event or event context!
 func (o *Observer) add(e *Handler) error {
-	if e == nil {
-		return fmt.Errorf("missing event handler")
+	if e.Name == "" {
+		return ErrMissingEventName
 	}
 	if e.Func == nil {
-		return fmt.Errorf("missing function for event handler")
+		return ErrMissingHandlerFunc
 	}
 	_, ok := o.eventHandlers[e.Name]
 	if !ok {
