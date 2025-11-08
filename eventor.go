@@ -97,7 +97,7 @@ type EventDispatcher interface {
 }
 
 // esnure our implementation satisfies the Observer interface
-var _ EventDispatcher = &Observer{}
+var _ EventDispatcher = (*Observer)(nil)
 
 type config struct {
 	logger              zerolog.Logger
