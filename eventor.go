@@ -82,9 +82,9 @@ type EventDispatcher interface {
 	RemoveIDPrefix(prefix string) uint64
 
 	// Replaces event handlers by their ID
-	ReplaceID(es []Handler, opt ...bool)
+	ReplaceID(es []Handler)
 	// Replaces the event handlers based on their event name and ID
-	ReplaceEventAndID(es []Handler, opt ...bool)
+	ReplaceEventAndID(es []Handler)
 
 	// Returns number of registered event handlers with the specific ID
 	CountID(id string) uint64
@@ -462,7 +462,7 @@ func (o *Observer) add(e *Handler) error {
 	return nil
 }
 
-func (o *Observer) ReplaceID(es []Handler, opt ...bool) {
+func (o *Observer) ReplaceID(es []Handler) {
 	o.mux.Lock()
 	defer o.mux.Unlock()
 	for _, e := range es {
@@ -470,7 +470,7 @@ func (o *Observer) ReplaceID(es []Handler, opt ...bool) {
 		_ = o.add(&e)
 	}
 }
-func (o *Observer) ReplaceEventAndID(es []Handler, opt ...bool) {
+func (o *Observer) ReplaceEventAndID(es []Handler) {
 	o.mux.Lock()
 	defer o.mux.Unlock()
 	for _, e := range es {
