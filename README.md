@@ -201,6 +201,7 @@ if err != nil {
 ### Triggering Events Concurrently
 
 ```go
+// Note: each goroutine requires its own event context!
 go observer.Dispatch("event_a", eventor.NewEventContext(context.Background()))
 ```
 
