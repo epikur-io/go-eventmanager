@@ -209,6 +209,7 @@ go observer.Dispatch("event_a", eventor.NewEventContext(context.Background()))
 
 ```go
 observer := eventor.NewObserver(
+	// Reverse execution order, lowest prio first (default: highest prio first).
 	eventor.WithExecutionOrder(eventor.ExecAscending),
 )
 ```
