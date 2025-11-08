@@ -192,10 +192,7 @@ observer.Add(eventor.EventHandler{
 ### Removing Handlers
 
 ```go
-err := observer.Remove("user_signup", "send_welcome_email")
-if err != nil {
-	log.Println("Handler removal failed:", err)
-}
+observer.Remove("user_signup", "send_welcome_email")
 ```
 
 ### Triggering Events Concurrently
